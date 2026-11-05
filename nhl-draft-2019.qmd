@@ -1,0 +1,208 @@
+---
+title: "2019 NHL Draft Predictions"
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+```{r}
+library(dplyr)
+library(DT)
+library(jsonlite)
+
+load("shiny_draft_app.RData")
+
+plot_df <- data |>
+  select(name, post_draft_nhl) |>
+  distinct()
+
+table_df <- data |>
+  select(name:pick)
+
+draft_json <- jsonlite::toJSON(plot_df, dataframe = "rows", auto_unbox = TRUE)
+```
+
+::: draft-app-card
+```{r}
+#| results: asis
+cat("```{=html}\n")
+cat("<div class='draft-controls'>\n")
+cat("  <label class='draft-label'>Players</label>\n")
+cat("  <div class='pill-box' id='pill-box'>\n")
+cat("    <span id='active-pills'></span>\n")
+cat("    <input type='text' id='player-search' placeholder='Add player...' autocomplete='off' />\n")
+cat("  </div>\n")
+cat("  <div id='player-dropdown' class='pill-dropdown'></div>\n")
+cat("</div>\n")
+cat("<div id='ggplot-container' class='draft-plot-wrapper'></div>\n")
+cat(paste0("<script>window.DRAFT_DATA = ", draft_json, ";</script>\n"))
+cat("```\n")
+```
+
+```{r}
+DT::datatable(
+  table_df,
+  rownames = FALSE,
+  options = list(
+    pageLength = 25,
+    lengthMenu = c(10, 25, 50, 100),
+    autoWidth = TRUE
+  ),
+  class = "display compact stripe hover"
+)
+```
+
+```{=html}
+<script>
+(function() {
+  function initDraftApp() {
+    const rawData = window.DRAFT_DATA || [];
+    let selected = [
+      'SOGAARD, MADS',
+      'JONES, HUNTER',
+      'KOCHETKOV, PYOTR',
+      'KNIGHT, SPENCER'
+    ];
+
+    const pillContainer = document.getElementById('active-pills');
+    const searchInput   = document.getElementById('player-search');
+    const dropdown      = document.getElementById('player-dropdown');
+    const plotContainer = document.getElementById('ggplot-container');
+
+    if (!plotContainer) return;
+
+    function ggplotBlueFill(val) {
+      const t = Math.max(0, Math.min(1, Number(val) || 0));
+      const r = Math.round(19 + t * (86 - 19));
+      const g = Math.round(43 + t * (177 - 43));
+      const b = Math.round(67 + t * (247 - 67));
+      return `rgb(${r}, ${g}, ${b})`;
+    }
+
+    function renderPlot() {
+      const filtered = rawData
+        .filter(d => selected.includes(d.name))
+        .sort((a, b) => String(a.name).localeCompare(String(b.name)));
+
+      const width = 920;
+      const height = 400;
+      const margin = { top: 48, right: 20, bottom: 42, left: 45 };
+      const plotW = width - margin.left - margin.right;
+      const plotH = height - margin.top - margin.bottom;
+
+      const yTicks = [0.00, 0.25, 0.50, 0.75, 1.00];
+      const yMinor = [0.125, 0.375, 0.625, 0.875];
+
+      let svg = `<svg viewBox="0 0 ${width} ${height}" width="100%" style="max-width:${width}px; display:block; font-family: Arial, Helvetica, sans-serif;">`;
+      svg += `<text x="${margin.left}" y="18" font-size="13.5" fill="#000000">Probability of Playing One or More Games in the NHL</text>`;
+      svg += `<text x="${margin.left}" y="35" font-size="11" fill="#000000">Age 23 or Younger</text>`;
+      svg += `<rect x="${margin.left}" y="${margin.top}" width="${plotW}" height="${plotH}" fill="#EBEBEB" />`;
+
+      yMinor.forEach(t => {
+        const y = margin.top + plotH * (1 - t);
+        svg += `<line x1="${margin.left}" y1="${y}" x2="${margin.left + plotW}" y2="${y}" stroke="#FFFFFF" stroke-width="0.75" />`;
+      });
+
+      yTicks.forEach(t => {
+        const y = margin.top + plotH * (1 - t);
+        svg += `<line x1="${margin.left}" y1="${y}" x2="${margin.left + plotW}" y2="${y}" stroke="#FFFFFF" stroke-width="1.4" />`;
+        svg += `<line x1="${margin.left - 3}" y1="${y}" x2="${margin.left}" y2="${y}" stroke="#333333" stroke-width="1" />`;
+        svg += `<text x="${margin.left - 6}" y="${y + 3.5}" font-size="9.5" fill="#4D4D4D" text-anchor="end">${t.toFixed(2)}</text>`;
+      });
+
+      const n = filtered.length;
+      if (n > 0) {
+        const step = plotW / n;
+        const barW = step * 0.88;
+        filtered.forEach((d, i) => {
+          const cx = margin.left + step * (i + 0.5);
+          const bx = cx - barW / 2;
+          const val = Math.max(0, Math.min(1, Number(d.post_draft_nhl) || 0));
+          const bh = plotH * val;
+          const by = margin.top + plotH - bh;
+
+          svg += `<line x1="${cx}" y1="${margin.top}" x2="${cx}" y2="${margin.top + plotH}" stroke="#FFFFFF" stroke-width="1.4" />`;
+          svg += `<rect x="${bx}" y="${by}" width="${barW}" height="${bh}" fill="${ggplotBlueFill(val)}" />`;
+          svg += `<line x1="${cx}" y1="${margin.top + plotH}" x2="${cx}" y2="${margin.top + plotH + 3}" stroke="#333333" stroke-width="1" />`;
+          svg += `<text x="${cx}" y="${margin.top + plotH + 14}" font-size="9.5" fill="#4D4D4D" text-anchor="middle">${d.name}</text>`;
+        });
+      }
+
+      svg += `<text x="${margin.left + plotW / 2}" y="${height - 6}" font-size="11" fill="#000000" text-anchor="middle">Player</text>`;
+      svg += `</svg>`;
+      plotContainer.innerHTML = svg;
+    }
+
+    function renderPills() {
+      pillContainer.innerHTML = '';
+      selected.forEach(name => {
+        const pill = document.createElement('span');
+        pill.className = 'player-pill';
+        pill.textContent = name;
+        pill.title = 'Click to remove';
+        pill.onclick = function() {
+          selected = selected.filter(n => n !== name);
+          renderPills();
+          renderPlot();
+        };
+        pillContainer.appendChild(pill);
+      });
+    }
+
+    function updateDropdown() {
+      const q = searchInput.value.trim().toUpperCase();
+      const matches = rawData
+        .map(d => d.name)
+        .filter(n => !selected.includes(n) && n.toUpperCase().includes(q))
+        .slice(0, 30);
+
+      if (matches.length === 0) {
+        dropdown.style.display = 'none';
+        return;
+      }
+
+      dropdown.innerHTML = '';
+      matches.forEach(name => {
+        const item = document.createElement('div');
+        item.className = 'pill-dropdown-item';
+        item.textContent = name;
+        item.onmousedown = function(e) {
+          e.preventDefault();
+          selected.push(name);
+          searchInput.value = '';
+          dropdown.style.display = 'none';
+          renderPills();
+          renderPlot();
+        };
+        dropdown.appendChild(item);
+      });
+      dropdown.style.display = 'block';
+    }
+
+    searchInput.addEventListener('focus', updateDropdown);
+    searchInput.addEventListener('input', updateDropdown);
+    searchInput.addEventListener('blur', function() {
+      setTimeout(() => { dropdown.style.display = 'none'; }, 150);
+    });
+    searchInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Backspace' && searchInput.value === '' && selected.length > 0) {
+        selected.pop();
+        renderPills();
+        renderPlot();
+      }
+    });
+
+    renderPills();
+    renderPlot();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initDraftApp);
+  } else {
+    initDraftApp();
+  }
+})();
+</script>
+```
+:::

@@ -1,0 +1,13 @@
+---
+title: "About"
+---
+
+::: {.wix-container-centered}
+
+# About Ian
+
+Ian Fleming is a FIFA-licensed agent and the former General Manager and Director of Soccer Operations of the Orlando Pride of the National Women's Soccer League, as well as previously serving as the Director of Strategy and Analytics for the Houston Dynamo and Houston Dash, and Director of Analytics and Strategy for the San Jose Earthquakes.
+
+Ian is a Chicago-Kent College of Law graduate, having focused on corporate law, by way of a Bachelor of Science degree in Economics from the University of South Carolina. He's had a lifelong love affair with all things goaltending and New York Rangers, which has caused him great suffering throughout his years on this planet. In a previous life, he played collegiate soccer at the Division II level.
+
+:::

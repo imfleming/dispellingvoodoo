@@ -1,0 +1,22 @@
+---
+title: "Contact"
+---
+
+::: {.wix-container-centered}
+
+# GET IN TOUCH
+
+::: {.contact-line}
+**Ian Fleming**  |  Pontchâteau, Loire-Atlantique, FRANCE  |  [ianmichaelfleming@gmail.com](mailto:ianmichaelfleming@gmail.com)
+:::
+
+```{=html}
+<form class="dv-contact-form" action="mailto:ianmichaelfleming@gmail.com" method="post" enctype="text/plain">
+  <input type="text" name="name" placeholder="Name *" required>
+  <input type="email" name="email" placeholder="Email *" required>
+  <textarea name="message" rows="6" placeholder="Message"></textarea>
+  <button type="submit">Send</button>
+</form>
+```
+
+:::

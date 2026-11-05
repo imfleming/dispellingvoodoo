@@ -1,0 +1,28 @@
+/* Replicate Wix 980px centered strip architecture */
+.wix-strip {
+  width: 100vw;
+  position: relative;
+  left: 50%;
+  right: 50%;
+  margin-left: -50vw;
+  margin-right: -50vw;
+  padding: 2.5rem 1rem;
+}
+
+.wix-container {
+  max-width: 980px;
+  margin: 0 auto;
+}
+
+/* Responsive full-width container for shinyapps.io iframes */
+.shiny-embed-container {
+  width: 100%;
+  max-width: 1400px;
+  margin: 1.5rem auto;
+}
+
+.shiny-embed-container iframe {
+  width: 100%;
+  min-height: 850px;
+  border: none;
+}

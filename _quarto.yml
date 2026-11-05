@@ -1,0 +1,49 @@
+project:
+  type: website
+  output-dir: docs
+  resources:
+    - CNAME
+
+website:
+  title: "Dispelling Voodoo"
+  site-url: "https://www.dispellingvoodoo.com"
+  search: false
+  navbar:
+    background: "#00747A"
+    foreground: "#FFFFFF"
+    title: '<span class="dv-monogram">DV</span><span class="dv-wordmark">Dispelling<br>Voodoo</span>'
+    left:
+      - text: "Home"
+        href: index.qmd
+      - text: "SAVE Chart"
+        menu:
+          - text: "SAVE v3 14-17"
+            href: save-v3-1417.qmd
+          - text: "SAV3"
+            href: sav3.qmd
+          - text: "SAVE v2 16-17"
+            href: save-v2-1617.qmd
+          - text: "SAVE v1 15-16"
+            href: save-v1-1516.qmd
+      - text: "SAVE Jr."
+        href: save-jr.qmd
+      - text: "TEAM"
+        href: team.qmd
+      - text: "MATE"
+        href: mate.qmd
+      - text: "NHL Draft"
+        href: nhl-draft-2019.qmd
+      - text: "Articles"
+        href: articles.qmd
+      - text: "About"
+        href: about.qmd
+      - text: "Contact"
+        href: contact.qmd
+
+format:
+  html:
+    theme: flatly
+    css: styles.css
+    page-layout: full
+    toc: false
+    title-block-banner: false

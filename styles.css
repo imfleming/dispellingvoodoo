@@ -1,0 +1,412 @@
+@import url('https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700&family=Economica:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+
+/* 1. Full-page #00747A Teal Background & Assistant Body Typography */
+body,
+#quarto-content,
+.page-columns {
+  background-color: #00747A !important;
+  color: #FFFFFF !important;
+  font-family: 'Assistant', sans-serif;
+  font-size: 18px;
+  line-height: 1.5;
+  letter-spacing: normal;
+}
+
+/* Hide Quarto's auto-generated title banner */
+#title-block-header {
+  display: none;
+}
+
+/* Page Titles (H1/H2) in Economica */
+h1,
+h2,
+.wix-heading-xl {
+  font-family: 'Economica', sans-serif;
+  font-weight: 700;
+  font-size: 56px;
+  color: #FFFFFF;
+  margin-bottom: 1.5rem;
+  letter-spacing: 0.5px;
+}
+
+/* Subheadings (H3+) in Economica */
+h3,
+.wix-heading-lg {
+  font-family: 'Economica', sans-serif;
+  font-weight: 700;
+  font-size: 36px;
+  color: #FFFFFF;
+  margin-bottom: 1rem;
+}
+
+/* Article Titles in Economica, Outlet names in Assistant */
+.article-entry {
+  margin-bottom: 2.25rem;
+}
+
+.article-title a {
+  font-family: 'Economica', sans-serif;
+  font-size: 24px;
+  font-weight: 400;
+  color: #FFFFFF;
+  text-decoration: underline;
+  display: inline-block;
+  margin-bottom: 0.15rem;
+}
+
+.article-title a:hover {
+  color: #A3BDC0;
+}
+
+.article-outlet {
+  font-family: 'Assistant', sans-serif;
+  font-size: 17px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* General links inside content container */
+.wix-container a {
+  color: #FFFFFF;
+  text-decoration: underline;
+}
+
+.wix-container a:hover {
+  color: #A3BDC0;
+}
+
+/* 2. Replicate Wix Stacked Header */
+#quarto-header,
+.navbar {
+  background-color: #00747A !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding-top: 1.35rem;
+  padding-bottom: 0.5rem;
+}
+
+.navbar > .container-fluid {
+  max-width: 1120px;
+  width: 100%;
+  margin: 0 auto !important;
+  padding: 0 1rem !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+}
+
+.navbar-brand-container {
+  width: 100%;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  margin-top: 0.15rem !important;
+  margin-bottom: 2.6rem !important;
+  padding-left: 0.5rem !important;
+  display: flex !important;
+  justify-content: flex-start !important;
+}
+
+/* 3. "DV | Dispelling Voodoo" Brand Lockup */
+.navbar-brand,
+.navbar-title,
+.dv-brand {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0 !important;
+  margin: 0 !important;
+  color: #FFFFFF !important;
+  text-decoration: none !important;
+}
+
+.dv-monogram {
+  font-family: 'Economica', sans-serif;
+  font-size: 4.5rem;
+  font-weight: 700;
+  line-height: 0.78;
+  letter-spacing: -3px;
+  color: #FFFFFF;
+}
+
+.dv-wordmark {
+  font-family: 'Economica', sans-serif;
+  font-size: 1.55rem;
+  font-weight: 400;
+  line-height: 1.05;
+  text-align: left;
+  color: #FFFFFF;
+}
+
+/* 4. Navbar Links & Charcoal (#2B2B2B) Centered Dropdown Menu */
+#navbarCollapse {
+  width: 100%;
+  display: flex !important;
+  justify-content: center !important;
+}
+
+.navbar-nav {
+  margin-left: auto !important;
+  margin-right: auto !important;
+  display: flex;
+  justify-content: center;
+}
+
+.navbar-nav .nav-link {
+  font-family: 'Economica', sans-serif;
+  font-size: 0.95rem !important;
+  font-weight: 400;
+  color: #FFFFFF !important;
+  padding: 0.25rem 0.95rem !important;
+  transition: color 0.2s ease;
+}
+
+.navbar-nav .nav-link.active,
+.navbar-nav .nav-link:hover {
+  color: #A3BDC0 !important;
+}
+
+/* Remove Bootstrap dropdown caret arrow (▾) */
+.navbar-nav .dropdown-toggle::after {
+  display: none !important;
+}
+
+/* Match Wix's centered #2B2B2B dark charcoal dropdown box */
+.navbar-nav .nav-item.dropdown:hover .dropdown-menu {
+  display: block;
+  margin-top: 0;
+  background-color: #2B2B2B !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  padding: 0.35rem 0 !important;
+  min-width: 145px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.navbar-nav .dropdown-item {
+  font-family: 'Economica', sans-serif;
+  font-size: 0.95rem;
+  color: #FFFFFF !important;
+  background-color: transparent !important;
+  text-align: center !important;
+  padding: 0.35rem 0.75rem !important;
+}
+
+.navbar-nav .dropdown-item:hover,
+.navbar-nav .dropdown-item.active {
+  color: #A3BDC0 !important;
+  background-color: transparent !important;
+}
+
+/* 5. Wix Content Containers & Centered Homepage Logo */
+.wix-container {
+  max-width: 720px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+/* Centered layout specifically for the About page */
+.wix-container-centered {
+  max-width: 650px;
+  margin: 2.25rem auto;
+  padding: 0 1rem;
+  text-align: center;
+}
+
+.wix-container img,
+.wix-img {
+  display: block;
+  margin: 2.6rem auto 1.5rem auto;
+  max-width: 600px;
+  width: 100%;
+  height: auto;
+}
+
+/* 6. Responsive 1460px Container for shinyapps.io Iframes (Matches image_9a1226) */
+.shiny-embed-container {
+  width: 100%;
+  max-width: 1460px;
+  margin: 1rem auto;
+  padding: 0 1rem;
+}
+
+.shiny-embed-container iframe {
+  width: 100%;
+  min-height: 880px;
+  border: none;
+  background-color: #FFFFFF;
+}
+
+/* 7. Clean Contact Form Styling (Matches image_7ecc62) */
+.contact-line {
+  margin-top: 2rem;
+  margin-bottom: 1.75rem;
+  font-size: 18px;
+}
+
+.contact-line a {
+  color: #FFFFFF !important;
+  text-decoration: none !important;
+}
+
+.contact-line a:hover {
+  color: #A3BDC0 !important;
+}
+
+.dv-contact-form {
+  max-width: 555px;
+  width: 100%;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dv-contact-form input,
+.dv-contact-form textarea {
+  background-color: #FFFFFF;
+  border: none;
+  padding: 6px 10px;
+  font-family: 'Assistant', sans-serif;
+  font-size: 15px;
+  color: #00747A;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.dv-contact-form input::placeholder,
+.dv-contact-form textarea::placeholder {
+  color: #00747A;
+  opacity: 0.85;
+}
+
+.dv-contact-form textarea {
+  resize: none;
+  height: 130px;
+}
+
+.dv-contact-form button {
+  align-self: flex-end;
+  background-color: #2B2B2B;
+  color: #FFFFFF;
+  border: none;
+  padding: 4px 11px;
+  margin-top: 4px;
+  font-family: 'Economica', sans-serif;
+  font-size: 15px;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.dv-contact-form button:hover {
+  opacity: 0.85;
+}
+
+/* 8. Native Self-Contained 2019 NHL Draft App Card (Matches image_9a1226) */
+.draft-app-card {
+  background-color: #FFFFFF;
+  color: #333333 !important;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  max-width: 1440px;
+  width: 95%;
+  margin: 1.5rem auto 3rem auto;
+  padding: 1.25rem 1.75rem 2.5rem 1.75rem;
+  box-sizing: border-box;
+}
+
+.draft-controls {
+  position: relative;
+  max-width: 310px;
+  margin-bottom: 1.25rem;
+}
+
+.draft-label {
+  display: block;
+  font-weight: 700;
+  font-size: 14px;
+  color: #333333;
+  margin-bottom: 5px;
+}
+
+.pill-box {
+  border: 1px solid #CCCCCC;
+  border-radius: 4px;
+  padding: 5px 6px 2px 6px;
+  background: #FFFFFF;
+  min-height: 36px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075);
+}
+
+.player-pill {
+  display: inline-block;
+  background: #EFEFEF;
+  color: #333333;
+  border-radius: 3px;
+  padding: 2px 6px;
+  margin: 0 4px 4px 0;
+  font-size: 13px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.player-pill:hover {
+  background: #DCDCDC;
+}
+
+#player-search {
+  border: none;
+  outline: none;
+  font-size: 13px;
+  color: #333333;
+  padding: 2px 4px;
+  margin-bottom: 3px;
+  flex: 1;
+  min-width: 80px;
+}
+
+.pill-dropdown {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  max-height: 220px;
+  overflow-y: auto;
+  background: #FFFFFF;
+  border: 1px solid #CCCCCC;
+  border-top: none;
+  border-radius: 0 0 4px 4px;
+  z-index: 1000;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.175);
+}
+
+.pill-dropdown-item {
+  padding: 5px 10px;
+  font-size: 13px;
+  color: #333333;
+  cursor: pointer;
+}
+
+.pill-dropdown-item:hover {
+  background-color: #F5F5F5;
+}
+
+.draft-plot-wrapper {
+  margin: 0.75rem 0 1.75rem 0;
+  max-width: 920px;
+}
+
+/* Ensure DataTables text & controls stay dark inside the white card */
+.draft-app-card .dataTables_wrapper,
+.draft-app-card table.dataTable,
+.draft-app-card .dataTables_info,
+.draft-app-card .dataTables_length label,
+.draft-app-card .dataTables_filter label {
+  color: #333333 !important;
+  font-size: 13.5px;
+}

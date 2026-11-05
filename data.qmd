@@ -1,0 +1,33 @@
+---
+title: "NHL Data"
+---
+
+::: {.wix-container}
+
+ 
+
+<span class="color_36 wixui-rich-text__text"><span class="wixui-rich-text__text"
+style="font-size:18px;"><span class="wixui-rich-text__text"
+style="font-family:wfont_e1c81a_741c11548d7e441c96716faa1bc64bd9,wf_741c11548d7e441c96716faa1,orig_economica;">\*Raw
+shot data for GSAA calculations via <span class="wixui-rich-text__text"
+style="text-decoration:underline;"><a href="http://corsica.hockey" class="wixui-rich-text__text"
+target="_blank" rel="noreferrer noopener">Corsica</a></span></span></span></span>
+
+<span class="color_36 wixui-rich-text__text"><span class="wixui-rich-text__text"
+style="font-size:18px;"><span class="wixui-rich-text__text"
+style="font-family:wfont_e1c81a_741c11548d7e441c96716faa1bc64bd9,wf_741c11548d7e441c96716faa1,orig_economica;">GSAA
+is calculated using only in-sample data</span></span></span>
+
+<span class="color_36 wixui-rich-text__text"><span class="wixui-rich-text__text"
+style="font-size:18px;"><span class="wixui-rich-text__text"
+style="font-family:wfont_e1c81a_741c11548d7e441c96716faa1bc64bd9,wf_741c11548d7e441c96716faa1,orig_economica;">2016-2017
+data updated through 12/22/16 games</span></span></span>
+
+:::
+
+```{=html}
+<div class="shiny-embed-container">
+  <iframe src="https://dev-wix-languages.appspot.com/widget?pageId=iakx8&compId=comp-is1246ki&viewerCompId=comp-is1246ki&siteRevision=140&viewMode=site&deviceType=desktop&locale=en&tz=America%2FChicago&regionalLanguage=en&width=915&height=522&instance=gMaJcTmeHC0O_tGzdcsje396d5sKR0dtVQOM7Hra3Dc.eyJpbnN0YW5jZUlkIjoiZTM4MmQ2NTUtOTE5Zi00MzYwLTg2M2YtZjhhOGMzNDNiMWMwIiwiYXBwRGVmSWQiOiIxMmQwMzkxZi1mN2EyLTlmNDMtMTUzZC04ODNmOTAxN2UyNTIiLCJtZXRhU2l0ZUlkIjoiNDdmNmIwMWQtNzdmNi00MTNlLWEwOTMtMWE2ZmU4YjRkNjUwIiwic2lnbkRhdGUiOiIyMDI2LTExLTA0VDE5OjAxOjI1LjQ5NVoiLCJkZW1vTW9kZSI6ZmFsc2UsImFpZCI6Ijc1NzBiMGU4LTJiZjUtNGMzNC1hNjM3LTNlODQ1NTlhYmE3NCIsImJpVG9rZW4iOiJhNDc0NjY0OC1lNjY5LTAyNWUtMjZhYy1lMmM3MmJmNzY3OTAiLCJzaXRlT3duZXJJZCI6ImUxYzgxYTc5LWUwOWQtNGNlNC1hNjBhLWZjNDMzMTgzNjM0OSIsImJzIjoiOHo0dmQtNTR1ekR5bkJkVWZfVDdZSWt5di16RV9oeWpsODZuQlRzZmc3dyIsInNjZCI6IjIwMTYtMDUtMDhUMDQ6NTg6NDYuNjYxWiJ9&currency=USD&currentCurrency=USD&commonConfig=%7B%22brand%22%3A%22wix%22%2C%22host%22%3A%22VIEWER%22%2C%22bsi%22%3A%221924f6a8-b4bb-4b91-91cf-198185484ced%7C1%22%2C%22siteRevision%22%3A%22140%22%2C%22renderingFlow%22%3A%22NONE%22%2C%22language%22%3A%22en%22%2C%22locale%22%3A%22en-us%22%2C%22BSI%22%3A%221924f6a8-b4bb-4b91-91cf-198185484ced%7C1%22%7D&currentRoute=.%2Fdata&vsi=4c120089-6804-4bbc-851e-8ffb8a907212" allowfullscreen></iframe>
+</div>
+```
+

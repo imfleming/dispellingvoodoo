@@ -1,0 +1,9 @@
+---
+title: "SAVE v1 (2015–2016)"
+---
+
+```{=html}
+<div style="display: flex; justify-content: center; margin: 2rem auto; width: 100%; overflow-x: auto;">
+  <iframe src="https://public.tableau.com/views/SAVEChart/Dashboard1?:showVizHome=no&:embed=true" width="804" height="719" style="border: none; max-width: 100%;" allowfullscreen></iframe>
+</div>
+```

@@ -1,0 +1,36 @@
+---
+title: "Articles"
+---
+
+::: {.wix-container}
+
+# Articles
+
+::: {.article-entry}
+::: {.article-title}
+[Chaos and Imprecision in the NHL Free Agent Market — An Economic Theory](https://thepolicy.us/chaos-and-imprecision-in-the-nhl-free-agent-market-an-economic-theory-85c7d486c2e2){target="_blank"}
+:::
+::: {.article-outlet}
+ThePolicy.us
+:::
+:::
+
+::: {.article-entry}
+::: {.article-title}
+[adjGSAxGA/60 - A(nother) Different Look at Goaltending](http://nhlnumbers.com/2016/7/30/adjgsaxga-60-a-nother-different-look-at-goaltending){target="_blank"}
+:::
+::: {.article-outlet}
+NHLNumbers.com
+:::
+:::
+
+::: {.article-entry}
+::: {.article-title}
+[Evaluating A New Goaltending Tandem](http://nhlnumbers.com/2016/8/24/evaluating-a-new-goaltending-tandem){target="_blank"}
+:::
+::: {.article-outlet}
+NHLNumbers.com
+:::
+:::
+
+:::

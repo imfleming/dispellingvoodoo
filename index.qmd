@@ -1,0 +1,7 @@
+---
+title: "Dispelling Voodoo"
+---
+
+::: wix-container
+![](assets/img/e1c81a_bd677e8c783c4ae78e7acd5339c5c358~mv2.png){.wix-img fig-align="center" width="600" height="395"}
+:::
