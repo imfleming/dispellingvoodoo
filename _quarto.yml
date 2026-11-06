@@ -1,8 +1,12 @@
 project:
   type: website
   output-dir: docs
+  render:
+    - "*.qmd"
+    - "!nhl-draft-2019.qmd"
   resources:
     - CNAME
+    - assets/data/draft_projections.json
 
 website:
   title: "Dispelling Voodoo"
@@ -33,7 +37,7 @@ website:
       - text: "MATE"
         href: mate.qmd
       - text: "NHL Draft"
-        href: nhl-draft-2019.qmd
+        href: nhl-draft.qmd
       - text: "Articles"
         href: articles.qmd
       - text: "About"
