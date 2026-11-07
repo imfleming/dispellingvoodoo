@@ -78,6 +78,7 @@ h3,
 /* 2. Replicate Wix Stacked Header */
 #quarto-header,
 .navbar {
+  position: relative !important;
   background-color: #00747A !important;
   border: none !important;
   box-shadow: none !important;
@@ -138,10 +139,51 @@ h3,
 }
 
 /* 4. Navbar Links & Charcoal (#2B2B2B) Centered Dropdown Menu */
-#navbarCollapse {
-  width: 100%;
-  display: flex !important;
-  justify-content: center !important;
+@media (min-width: 992px) {
+  #navbarCollapse {
+    width: 100%;
+    display: flex !important;
+    justify-content: center !important;
+  }
+}
+
+@media (max-width: 991.98px) {
+  .navbar > .container-fluid {
+    flex-direction: row !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+  }
+  .navbar-brand-container {
+    width: auto !important;
+    margin-bottom: 0 !important;
+  }
+  .dv-monogram {
+    font-size: 3.2rem;
+  }
+  .dv-wordmark {
+    font-size: 1.2rem;
+  }
+  #navbarCollapse {
+    width: 100%;
+    padding-top: 0.75rem;
+    text-align: center;
+  }
+  .navbar-nav {
+    align-items: center;
+  }
+  /* Fix clipped SAVE Chart dropdown on mobile (57519.png) */
+  .navbar-nav .nav-item.dropdown .dropdown-menu {
+    position: static !important;
+    transform: none !important;
+    margin: 0.25rem auto !important;
+    text-align: center !important;
+  }
+  /* Allow horizontal touch-scrolling for wide Tableau embeds (57520.png) */
+  .wix-container,
+  .tableauPlaceholder {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 .navbar-nav {
