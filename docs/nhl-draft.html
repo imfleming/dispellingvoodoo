@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>Longitudinal Draft Board &amp; Prospect Dossier – Dispelling Voodoo</title>
+<title>NHL Draft Big Board and Prospect Dossiers – Dispelling Voodoo</title>
 <style>
 /* Default styles provided by pandoc.
 ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
@@ -148,7 +148,7 @@ ul.task-list li input[type="checkbox"] {
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">Longitudinal Draft Board &amp; Prospect Dossier</h1>
+<h1 class="title">NHL Draft Big Board and Prospect Dossiers</h1>
 </div>
 
 
@@ -180,7 +180,7 @@ ul.task-list li input[type="checkbox"] {
 }
 
 .chl-subnav {
-  background-color: #1D3549;
+  background-color: #00747A;
   padding: 0.65rem 1.25rem;
   display: flex;
   align-items: center;
@@ -216,9 +216,9 @@ ul.task-list li input[type="checkbox"] {
 
 .chl-tab-btn.active,
 .chl-tab-btn:hover {
-  background-color: #00747A;
-  border-color: #00747A;
-  color: #FFFFFF;
+  background-color: #FFFFFF;
+  border-color: #FFFFFF;
+  color: #00747A;
 }
 
 .chl-layout {
@@ -438,9 +438,9 @@ ul.task-list li input[type="checkbox"] {
 
 <div class="chl-app-shell">
   <div class="chl-subnav">
-    <div class="chl-subnav-title">Multi-League Bayesian Talent &amp; Longitudinal Draft Analytics</div>
+    <div class="chl-subnav-title">NHL Draft Big Board and Prospect Dossiers</div>
     <div class="chl-tabs">
-      <button id="btn-tab-board" class="chl-tab-btn active" onclick="switchChlTab('board')">Longitudinal Draft Board</button>
+      <button id="btn-tab-board" class="chl-tab-btn active" onclick="switchChlTab('board')">Draft Board</button>
       <button id="btn-tab-dossier" class="chl-tab-btn" onclick="switchChlTab('dossier')">Prospect Dossier</button>
     </div>
   </div>
@@ -460,11 +460,11 @@ ul.task-list li input[type="checkbox"] {
       </div>
 
       <div class="chl-field" id="wrap-sort-mode">
-        <label for="board_sort_mode">Draft Table Ranking Mode:</label>
+        <label for="board_sort_mode">Sort Board By:</label>
         <select id="board_sort_mode" onchange="updateDraftBoard()">
-          <option value="ewar_bpa">Front-Office Big Board (Projected 7-Yr eWAR)</option>
-          <option value="market_pick">Consensus Market Board (Expected Pick / Equity)</option>
-          <option value="surplus_ewar">Draft Table Steals (Surplus eWAR vs. Slot)</option>
+          <option value="ewar_bpa">Model Big Board (Best Player Available)</option>
+          <option value="market_pick">Consensus Draft Order (Expected Pick)</option>
+          <option value="surplus_ewar">Value Picks (Highest Surplus Value)</option>
         </select>
       </div>
 

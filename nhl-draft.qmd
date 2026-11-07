@@ -1,5 +1,5 @@
 ---
-title: "Longitudinal Draft Board & Prospect Dossier"
+title: "NHL Draft Big Board and Prospect Dossiers"
 html-table-processing: none
 execute:
   echo: false
@@ -23,7 +23,7 @@ execute:
 }
 
 .chl-subnav {
-  background-color: #1D3549;
+  background-color: #00747A;
   padding: 0.65rem 1.25rem;
   display: flex;
   align-items: center;
@@ -59,9 +59,9 @@ execute:
 
 .chl-tab-btn.active,
 .chl-tab-btn:hover {
-  background-color: #00747A;
-  border-color: #00747A;
-  color: #FFFFFF;
+  background-color: #FFFFFF;
+  border-color: #FFFFFF;
+  color: #00747A;
 }
 
 .chl-layout {
@@ -281,9 +281,9 @@ execute:
 
 <div class="chl-app-shell">
   <div class="chl-subnav">
-    <div class="chl-subnav-title">Multi-League Bayesian Talent & Longitudinal Draft Analytics</div>
+    <div class="chl-subnav-title">NHL Draft Big Board and Prospect Dossiers</div>
     <div class="chl-tabs">
-      <button id="btn-tab-board" class="chl-tab-btn active" onclick="switchChlTab('board')">Longitudinal Draft Board</button>
+      <button id="btn-tab-board" class="chl-tab-btn active" onclick="switchChlTab('board')">Draft Board</button>
       <button id="btn-tab-dossier" class="chl-tab-btn" onclick="switchChlTab('dossier')">Prospect Dossier</button>
     </div>
   </div>
@@ -303,11 +303,11 @@ execute:
       </div>
 
       <div class="chl-field" id="wrap-sort-mode">
-        <label for="board_sort_mode">Draft Table Ranking Mode:</label>
+        <label for="board_sort_mode">Sort Board By:</label>
         <select id="board_sort_mode" onchange="updateDraftBoard()">
-          <option value="ewar_bpa">Front-Office Big Board (Projected 7-Yr eWAR)</option>
-          <option value="market_pick">Consensus Market Board (Expected Pick / Equity)</option>
-          <option value="surplus_ewar">Draft Table Steals (Surplus eWAR vs. Slot)</option>
+          <option value="ewar_bpa">Model Big Board (Best Player Available)</option>
+          <option value="market_pick">Consensus Draft Order (Expected Pick)</option>
+          <option value="surplus_ewar">Value Picks (Highest Surplus Value)</option>
         </select>
       </div>
 
