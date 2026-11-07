@@ -1392,7 +1392,7 @@ document.addEventListener('DOMContentLoaded', function() {
       return r.json();
     })
     .then(data => {
-      ALL_PROSPECTS = data;
+      ALL_PROSPECTS = Array.isArray(data) ? data : data.rows.map(r => Object.fromEntries(data.cols.map((c, i) => [c, r[i]])));
       try {
         updateDraftBoard();
       } catch (e) {
