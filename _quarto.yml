@@ -6,6 +6,7 @@ project:
     - "!nhl-draft-2019.qmd"
   resources:
     - CNAME
+    - assets/data/draft_projections.json
 
 website:
   title: "Dispelling Voodoo"

@@ -6,3 +6,5 @@
 /.quarto/
 **/*.quarto_ipynb
 -e "_raw_html/\n_unpacked_embeds/\n.Rproj.user/\n.Rhistory\n.RData" 
+
+assets/data/draft_projections.json
