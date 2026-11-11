@@ -1561,12 +1561,6 @@ function downloadSocialCardPng() {
 document.addEventListener('DOMContentLoaded', function() {
   const bCohort = document.getElementById('board_cohort');
   const dCohort = document.getElementById('dossier_cohort');
-  for (let y = 2027; y >= 2014; y--) {
-    bCohort.add(new Option(String(y), String(y)));
-    dCohort.add(new Option(String(y), String(y)));
-  }
-  bCohort.value = "2026";
-  dCohort.value = "2026";
 
   fetch('assets/data/draft_projections.json?v=' + new Date().toISOString().slice(0, 10))
     .then(r => {
@@ -1575,6 +1569,19 @@ document.addEventListener('DOMContentLoaded', function() {
     })
     .then(data => {
       ALL_PROSPECTS = Array.isArray(data) ? data : data.rows.map(r => Object.fromEntries(data.cols.map((c, i) => [c, r[i]])));
+      let maxYr = 2027;
+      ALL_PROSPECTS.forEach(d => {
+        const cy = parseInt(d.draft_cohort_year, 10);
+        if (!isNaN(cy) && cy > maxYr) maxYr = cy;
+      });
+      bCohort.innerHTML = '';
+      dCohort.innerHTML = '';
+      for (let y = maxYr; y >= 2014; y--) {
+        bCohort.add(new Option(String(y), String(y)));
+        dCohort.add(new Option(String(y), String(y)));
+      }
+      bCohort.value = String(maxYr);
+      dCohort.value = String(maxYr);
       try {
         updateDraftBoard();
       } catch (e) {
