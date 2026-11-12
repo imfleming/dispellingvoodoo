@@ -318,10 +318,24 @@ execute:
 <div class="chl-app-shell">
   <div class="chl-subnav">
     <div class="chl-subnav-title">NHL Draft Big Board and Prospect Dossiers</div>
-    <div class="chl-tabs">
+    <div class="chl-tabs" style="align-items: center;">
+      <span id="lbl_last_sync" style="color: rgba(255,255,255,0.88); font-size: 0.80rem; font-weight: 600; margin-right: 0.35rem;"></span>
       <button id="btn-tab-board" class="chl-tab-btn active" onclick="switchChlTab('board')">Draft Board</button>
       <button id="btn-tab-dossier" class="chl-tab-btn" onclick="switchChlTab('dossier')">Prospect Dossier</button>
+      <button id="btn-tab-status" class="chl-tab-btn" onclick="toggleDataStatusDrawer()" style="font-size: 0.84rem; padding: 0.35rem 0.75rem;">Data Status (43 Circuits)</button>
     </div>
+  </div>
+
+  <!-- COLLAPSIBLE DATA FRESHNESS & 43-CIRCUIT COVERAGE DRAWER -->
+  <div id="panel-data-status" style="display: none; background: #0F172A; color: #F8FAFC; padding: 1rem 1.25rem; border-bottom: 2px solid #00747A;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem;">
+      <div>
+        <strong style="font-size: 0.95rem; color: #38BDF8;">Global Feeder & Pro Circuit Sync Status</strong>
+        <span id="status_drawer_sub" style="font-size: 0.80rem; color: #94A3B8; margin-left: 0.75rem;"></span>
+      </div>
+      <button onclick="toggleDataStatusDrawer()" style="background: transparent; border: 1px solid #475569; color: #CBD5E1; border-radius: 4px; padding: 2px 8px; font-size: 0.78rem; cursor: pointer;">Close ✕</button>
+    </div>
+    <div id="status_drawer_grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(215px, 1fr)); gap: 0.45rem; max-height: 260px; overflow-y: auto; font-size: 0.78rem;"></div>
   </div>
 
   <!-- TAB 1: LONGITUDINAL DRAFT BOARD -->
@@ -333,8 +347,9 @@ execute:
       <div class="chl-field">
         <label>Talent Pool:</label>
         <div class="chl-radio-group">
-          <label><input type="radio" name="board_role" value="skater" checked onchange="updateDraftBoard()"> Skaters (Trajectory + eWAR)</label>
-          <label><input type="radio" name="board_role" value="goalie" onchange="updateDraftBoard()"> Goaltenders (2-Level GSAx)</label>
+          <label><input type="radio" name="board_role" value="all" checked onchange="updateDraftBoard()"> All Prospects (Combined Board)</label>
+          <label><input type="radio" name="board_role" value="skater" onchange="updateDraftBoard()"> Skaters Only (F / D)</label>
+          <label><input type="radio" name="board_role" value="goalie" onchange="updateDraftBoard()"> Goaltenders Only (G)</label>
         </div>
       </div>
 
@@ -497,8 +512,47 @@ execute:
 
 <script>
 let ALL_PROSPECTS = [];
+let LEAGUE_SYNC_LOG = [];
 let CURRENT_BOARD_ROWS = [];
 let CURRENT_DOSSIER_POOL = [];
+
+function toggleDataStatusDrawer() {
+  const el = document.getElementById('panel-data-status');
+  const btn = document.getElementById('btn-tab-status');
+  if (!el) return;
+  const isHidden = (el.style.display === 'none' || el.style.display === '');
+  el.style.display = isHidden ? 'block' : 'none';
+  if (btn) btn.classList.toggle('active', isHidden);
+}
+
+function renderDataStatusDrawer(syncLog, genAt) {
+  const lbl = document.getElementById('lbl_last_sync');
+  const sub = document.getElementById('status_drawer_sub');
+  const grid = document.getElementById('status_drawer_grid');
+  if (lbl && genAt) lbl.textContent = `Updated: ${genAt.slice(0, 10)}`;
+  if (!grid || !Array.isArray(syncLog) || syncLog.length === 0) return;
+
+  const liveCnt = syncLog.filter(r => Number(r[2] || r.active_skaters || 0) > 0).length;
+  if (sub) sub.textContent = `${liveCnt} of ${syncLog.length} circuits active in current season • Last pipeline sync: ${genAt || 'Live'}`;
+
+  let html = '';
+  syncLog.forEach(r => {
+    const lgCode = Array.isArray(r) ? r[0] : r.league;
+    const skCnt  = Array.isArray(r) ? Number(r[2] || 0) : Number(r.active_skaters || 0);
+    const maxGp  = Array.isArray(r) ? Number(r[3] || 0) : Number(r.max_sk_gp || 0);
+    const gkCnt  = Array.isArray(r) ? Number(r[4] || 0) : Number(r.active_goalies || 0);
+    const status = Array.isArray(r) ? String(r[6] || '') : String(r.sync_status || '');
+    const dotCol = skCnt > 0 ? '#34D399' : '#F59E0B';
+    const statTxt= skCnt > 0 ? `${skCnt} SK • ${gkCnt} G (Max ${maxGp} GP)` : 'Off-Season / Pending';
+    html += `<div style="background:#1E293B; border:1px solid #334155; border-radius:4px; padding:5px 8px; display:flex; justify-content:space-between; align-items:center;">
+      <div>
+        <div style="font-weight:700; color:#F8FAFC;"><span style="color:${dotCol}; margin-right:4px;">●</span>${fmtLeague(lgCode)} <span style="color:#64748B; font-size:0.70rem;">(${lgCode})</span></div>
+        <div style="color:#94A3B8; font-size:0.72rem;">${statTxt}</div>
+      </div>
+    </div>`;
+  });
+  grid.innerHTML = html;
+}
 
 const TIER_ORDER = [
   "U18_PREP", "EURO_JUNIOR", "JUNIOR_A", "USHL_NTDP", "CHL",
@@ -723,17 +777,17 @@ function updateDraftBoard() {
   if (!ALL_PROSPECTS || ALL_PROSPECTS.length === 0) return;
 
   const role      = getRadioVal('board_role');
-  const sortMode  = document.getElementById('board_sort_mode').value || 'ewar_bpa';
-  const cohortYr  = parseInt(document.getElementById('board_cohort').value, 10) || 2026;
+  const sortMode  = document.getElementById('board_sort_mode').value || 'market_pick';
+  const cohortYr  = parseInt(document.getElementById('board_cohort').value, 10) || 2027;
   const league    = document.getElementById('board_league').value || 'ALL';
   const posFilter = document.getElementById('board_pos').value || 'ALL';
   const minEq     = parseFloat(document.getElementById('board_min_equity').value) || 0;
   const maxRows   = parseInt(document.getElementById('board_max_rows').value, 10) || 100;
 
-  document.getElementById('wrap-sort-mode').style.display  = (role === 'skater') ? 'block' : 'none';
+  document.getElementById('wrap-sort-mode').style.display  = (role !== 'goalie') ? 'block' : 'none';
   document.getElementById('wrap-pos-filter').style.display = (role === 'skater') ? 'block' : 'none';
 
-  let df = ALL_PROSPECTS.filter(d => d.role_type === role && Number(d.draft_cohort_year) === cohortYr);
+  let df = ALL_PROSPECTS.filter(d => (role === 'all' || d.role_type === role) && Number(d.draft_cohort_year) === cohortYr);
 
   if (league !== 'ALL') {
     df = df.filter(d => d.league === league);
@@ -751,7 +805,7 @@ function updateDraftBoard() {
     df = df.filter(d => (Number(d.draft_equity_score) || 0) >= minEq);
   }
 
-  if (role === 'skater') {
+  if (role !== 'goalie') {
     if (sortMode === 'ewar_bpa') {
       df.sort((a, b) => (Number(b.proj_7yr_ewar) || 0) - (Number(a.proj_7yr_ewar) || 0) || (Number(a.expected_pick) || 999) - (Number(b.expected_pick) || 999));
     } else if (sortMode === 'surplus_ewar') {
@@ -765,7 +819,8 @@ function updateDraftBoard() {
 
   CURRENT_BOARD_ROWS = df;
 
-  document.getElementById('board_table_title').textContent = `Class of ${cohortYr} ${role === 'skater' ? 'Skater' : 'Goaltender'} Master Draft Board (Ranked by Unconditional Draft Equity)`;
+  const roleTitle = (role === 'all') ? 'Combined (Skaters + Goalies)' : (role === 'skater' ? 'Skater' : 'Goaltender');
+  document.getElementById('board_table_title').textContent = `Class of ${cohortYr} ${roleTitle} Master Draft Board`;
   if (df.length > 0) {
     document.getElementById('kpi_top_name').textContent = df[0].display_name || df[0].player_name;
     document.getElementById('kpi_top_sub').textContent  = `${fmtLeague(df[0].league)} • Projected Pick #${Math.round(Number(df[0].expected_pick || 1))}`;
@@ -789,7 +844,7 @@ function updateDraftBoard() {
   }
 
   renderBoardTable(df.slice(0, maxRows), role, cohortYr);
-  renderBoardPlots(df.slice(0, Math.min(df.length, 400)), role);
+  renderBoardPlots(df.slice(0, Math.min(df.length, 400)), role === 'goalie' ? 'goalie' : 'skater');
 }
 
 function formatRoleBadge(rRaw) {
@@ -813,35 +868,31 @@ function renderBoardTable(rows, role, cohortYr) {
   const tblClose = '</' + 'tbody></' + 'table>';
   let html = tblOpen;
 
-  if (role === 'skater') {
+  if (role === 'skater' || role === 'all') {
     html += `
-      <th>${tipHdr("Rank", "Overall class rank ordered by unconditional Draft Equity Score.")}</th>
+      <th>${tipHdr("Rank", "Overall class rank in current view.")}</th>
       <th>${tipHdr("Prospect", "Prospect full name. Click any row to open their Prospect Dossier.")}</th>
-      <th>${tipHdr("Pos", "Primary skater position.")}</th>
+      <th>${tipHdr("Pos", "Primary position (F, D, or G).")}</th>
       <th>${tipHdr("League", "Primary draft-year league (hover to view all circuits played).")}</th>
       <th>${tipHdr("Size", "Verified height and weight in lbs.")}</th>
-      <th>${tipHdr("D-1 (GP)", "Prior season OHL-translated points per game and games played in parentheses.")}</th>
-      <th>${tipHdr("D-0 (GP)", "Draft-season OHL-translated points per game and games played in parentheses.")}</th>
-      <th>${tipHdr("Adj. Pace (YoY)", "4-Pillar Kalman-shrunken longitudinal scoring pace (OHL = 1.000) and year-over-year percentage change.")}</th>
+      <th>${tipHdr("D-1 (GP)", "Prior season OHL-translated PPG (skaters) or GSAx % (goalies) and games played.")}</th>
+      <th>${tipHdr("D-0 (GP)", "Draft-season OHL-translated PPG (skaters) or GSAx % (goalies) and games played.")}</th>
+      <th>${tipHdr("Adj. Pace (YoY)", "Kalman-shrunken longitudinal pace (Adj PPG for skaters, GSAx % for goalies) and YoY change.")}</th>
       <th>${tipHdr("P(Draft)", "Ensemble probability of being selected in the 7-round NHL Entry Draft.")}</th>
-      <th>${tipHdr("Proj. Pick", "Expected NHL Entry Draft selection slot and round.")}</th>
+      <th>${tipHdr("Proj. Pick", "Unified 1-to-1 NHL Entry Draft selection slot and round.")}</th>
       <th>${tipHdr("Actual", "Official NHL Entry Draft selection number (if drafted).")}</th>
       <th>${tipHdr("Equity", "Unconditional draft capital score (0-100 scale).")}</th>
-      <th>${tipHdr("NHL Prob", "Probability of playing 20+ NHL games (with 100+ game full-time regular probability in parentheses) during the 7-season team-control window.")}</th>
-      <th>${tipHdr("84-GP Pace", "Projected average scoring pace per 84 NHL games across the player's first 7 NHL seasons.")}</th>
+      <th>${tipHdr("NHL Prob", "Probability of reaching the NHL (with full-time regular / tandem starter probability in parentheses) during the 7-season team-control window.")}</th>
+      <th>${tipHdr("NHL Pace", "Projected 84-game scoring pace (skaters) or 50-game GSAx pace (goalies) as an NHL regular.")}</th>
       <th>${tipHdr("7-Year eWAR", "Projected total Expected Wins Above Replacement accrued across the player's first 7 NHL seasons (pre-UFA team-control window).")}</th>
       <th>${tipHdr("Projected Role", "Projected NHL lineup tier over the 7-season team-control window.")}</th>
     </tr></thead><tbody>`;
 
     rows.forEach((d, idx) => {
+      const isRowGk = (d.role_type === 'goalie');
       const ht = fmtHeight(d.height_inches);
       const wt = d.weight_lbs >= 100 ? `${Math.round(d.weight_lbs)}` : '';
       const stature = (ht !== '-' && wt) ? `${ht} • ${wt}` : (ht !== '-' ? ht : (wt ? `${wt} lbs` : '-'));
-      const d1 = (d.gp_d1 > 0) ? `${Number(d.ppg_d1 || 0).toFixed(2)} <span style="color:#64748B;font-size:0.76rem;">(${d.gp_d1})</span>` : `<span style="color:#94A3B8;">-</span>`;
-      const d0 = (d.gp_d0 > 0) ? `${Number(d.ppg_d0 || 0).toFixed(2)} <span style="color:#64748B;font-size:0.76rem;">(${d.gp_d0})</span>` : `<span style="color:#94A3B8;">-</span>`;
-      const velPct = Math.round((Number(d.growth_velocity) || 0) * 100);
-      const velCol = velPct >= 0 ? '#059669' : '#D6604D';
-      const adjPace = `<b>${Number(d.trajectory_ppg || 0).toFixed(3)}</b> <span style="color:${velCol};font-size:0.75rem;font-weight:600;">(${velPct >= 0 ? '+' : ''}${velPct}%)</span>`;
       const actPick = (d.actual_draft_pick > 0) ? `<span class="badge" style="background-color:#0284C7;color:#FFFFFF;font-weight:700;padding:2px 6px;border-radius:4px;">#${d.actual_draft_pick}</span>` : `<span style="color:#94A3B8;">-</span>`;
       const surp = Number(d.surplus_7yr_ewar || 0);
       const surpCol = surp >= 0 ? '#059669' : '#D6604D';
@@ -852,10 +903,30 @@ function renderBoardTable(rows, role, cohortYr) {
       const pkInt = Math.max(1, Math.round(Number(d.expected_pick || 224)));
       const rndInt = Math.max(1, Math.ceil((pkInt - 0.5) / 32));
 
-      html += `<tr onclick="openProspectInDossier('${safeClean}', ${cohortYr}, 'skater')">
+      let posBadge, d1, d0, adjPace, nhlPace;
+      if (isRowGk) {
+        posBadge = `<span class="badge" style="background-color:#059669;color:#FFFFFF;padding:2px 6px;border-radius:4px;">G</span>`;
+        d1 = (d.gp_d1 > 0) ? `${(Number(d.gsax_rate_d1 || 0) * 100 >= 0 ? '+' : '')}${(Number(d.gsax_rate_d1 || 0) * 100).toFixed(2)}% <span style="color:#64748B;font-size:0.76rem;">(${d.gp_d1})</span>` : `<span style="color:#94A3B8;">-</span>`;
+        const d0Rate = (d.gsax_rate_d0 !== null && d.gsax_rate_d0 !== undefined) ? Number(d.gsax_rate_d0) : Number(d.trajectory_gsax_rate || 0);
+        d0 = (d.gp_d0 > 0) ? `${d0Rate * 100 >= 0 ? '+' : ''}${(d0Rate * 100).toFixed(2)}% <span style="color:#64748B;font-size:0.76rem;">(${d.gp_d0})</span>` : `<span style="color:#94A3B8;">-</span>`;
+        const adjRate = Number(d.trajectory_gsax_rate || 0) * 100;
+        adjPace = `<b>${adjRate >= 0 ? '+' : ''}${adjRate.toFixed(2)}%</b> <span style="color:#059669;font-size:0.72rem;font-weight:600;">GSAx</span>`;
+        const gsax50 = Number(d.cond_nhl_gsax_50 || 0);
+        nhlPace = `${gsax50 >= 0 ? '+' : ''}${gsax50.toFixed(1)} GSAx`;
+      } else {
+        posBadge = `<span class="badge bg-secondary" style="padding:2px 6px;border-radius:4px;">${d.position_granular || 'F'}</span>`;
+        d1 = (d.gp_d1 > 0) ? `${Number(d.ppg_d1 || 0).toFixed(2)} <span style="color:#64748B;font-size:0.76rem;">(${d.gp_d1})</span>` : `<span style="color:#94A3B8;">-</span>`;
+        d0 = (d.gp_d0 > 0) ? `${Number(d.ppg_d0 || 0).toFixed(2)} <span style="color:#64748B;font-size:0.76rem;">(${d.gp_d0})</span>` : `<span style="color:#94A3B8;">-</span>`;
+        const velPct = Math.round((Number(d.growth_velocity) || 0) * 100);
+        const velCol = velPct >= 0 ? '#059669' : '#D6604D';
+        adjPace = `<b>${Number(d.trajectory_ppg || 0).toFixed(3)}</b> <span style="color:${velCol};font-size:0.75rem;font-weight:600;">(${velPct >= 0 ? '+' : ''}${velPct}%)</span>`;
+        nhlPace = `${Number(d.cond_nhl_pts_82 || 0).toFixed(1)} PTS`;
+      }
+
+      html += `<tr onclick="openProspectInDossier('${safeClean}', ${cohortYr}, '${d.role_type}')">
         <td>${idx + 1}</td>
         <td><b>${d.display_name || d.player_name}</b>${reBadge}</td>
-        <td><span class="badge bg-secondary" style="padding:2px 6px;border-radius:4px;">${d.position_granular || 'F'}</span></td>
+        <td>${posBadge}</td>
         <td><b title="All Circuits: ${fmtLeagueBanner(d.all_leagues, d.league)}">${fmtLeague(d.league)}</b></td>
         <td>${stature}</td>
         <td>${d1}</td>
@@ -866,7 +937,7 @@ function renderBoardTable(rows, role, cohortYr) {
         <td>${actPick}</td>
         <td><b><span style="color:#0284C7;">${Number(d.draft_equity_score || 0).toFixed(1)}</span></b></td>
         <td><b>${Number(d.p_nhl_20gp || 0).toFixed(1)}%</b> <span style="color:#64748B;font-size:0.75rem;">(${Math.round(d.p_nhl_100gp || 0)}%)</span></td>
-        <td>${Number(d.cond_nhl_pts_82 || 0).toFixed(1)} PTS</td>
+        <td>${nhlPace}</td>
         <td><b><span style="color:#059669;">${Number(d.proj_7yr_ewar || 0) >= 0 ? '+' : ''}${Number(d.proj_7yr_ewar || 0).toFixed(1)}</span></b> <span style="color:${surpCol};font-size:0.75rem;font-weight:600;">(${surp >= 0 ? '+' : ''}${surp.toFixed(1)})</span></td>
         <td>${formatRoleBadge(d.nhl_projection_tier)}</td>
       </tr>`;
@@ -1569,6 +1640,10 @@ document.addEventListener('DOMContentLoaded', function() {
     })
     .then(data => {
       ALL_PROSPECTS = Array.isArray(data) ? data : data.rows.map(r => Object.fromEntries(data.cols.map((c, i) => [c, r[i]])));
+      if (!Array.isArray(data) && data.sync_log) {
+        LEAGUE_SYNC_LOG = data.sync_log;
+        renderDataStatusDrawer(data.sync_log, data.generated_at);
+      }
       let maxYr = 2027;
       ALL_PROSPECTS.forEach(d => {
         const cy = parseInt(d.draft_cohort_year, 10);
