@@ -319,23 +319,10 @@ execute:
   <div class="chl-subnav">
     <div class="chl-subnav-title">NHL Draft Big Board and Prospect Dossiers</div>
     <div class="chl-tabs" style="align-items: center;">
-      <span id="lbl_last_sync" style="color: rgba(255,255,255,0.88); font-size: 0.80rem; font-weight: 600; margin-right: 0.35rem;"></span>
+      <span id="lbl_last_sync" style="color: rgba(255,255,255,0.88); font-size: 0.82rem; font-weight: 600; margin-right: 0.45rem;"></span>
       <button id="btn-tab-board" class="chl-tab-btn active" onclick="switchChlTab('board')">Draft Board</button>
       <button id="btn-tab-dossier" class="chl-tab-btn" onclick="switchChlTab('dossier')">Prospect Dossier</button>
-      <button id="btn-tab-status" class="chl-tab-btn" onclick="toggleDataStatusDrawer()" style="font-size: 0.84rem; padding: 0.35rem 0.75rem;">Data Status (43 Circuits)</button>
     </div>
-  </div>
-
-  <!-- COLLAPSIBLE DATA FRESHNESS & 43-CIRCUIT COVERAGE DRAWER -->
-  <div id="panel-data-status" style="display: none; background: #0F172A; color: #F8FAFC; padding: 1rem 1.25rem; border-bottom: 2px solid #00747A;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem;">
-      <div>
-        <strong style="font-size: 0.95rem; color: #38BDF8;">Global Feeder & Pro Circuit Sync Status</strong>
-        <span id="status_drawer_sub" style="font-size: 0.80rem; color: #94A3B8; margin-left: 0.75rem;"></span>
-      </div>
-      <button onclick="toggleDataStatusDrawer()" style="background: transparent; border: 1px solid #475569; color: #CBD5E1; border-radius: 4px; padding: 2px 8px; font-size: 0.78rem; cursor: pointer;">Close ✕</button>
-    </div>
-    <div id="status_drawer_grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(215px, 1fr)); gap: 0.45rem; max-height: 260px; overflow-y: auto; font-size: 0.78rem;"></div>
   </div>
 
   <!-- TAB 1: LONGITUDINAL DRAFT BOARD -->
@@ -512,47 +499,8 @@ execute:
 
 <script>
 let ALL_PROSPECTS = [];
-let LEAGUE_SYNC_LOG = [];
 let CURRENT_BOARD_ROWS = [];
 let CURRENT_DOSSIER_POOL = [];
-
-function toggleDataStatusDrawer() {
-  const el = document.getElementById('panel-data-status');
-  const btn = document.getElementById('btn-tab-status');
-  if (!el) return;
-  const isHidden = (el.style.display === 'none' || el.style.display === '');
-  el.style.display = isHidden ? 'block' : 'none';
-  if (btn) btn.classList.toggle('active', isHidden);
-}
-
-function renderDataStatusDrawer(syncLog, genAt) {
-  const lbl = document.getElementById('lbl_last_sync');
-  const sub = document.getElementById('status_drawer_sub');
-  const grid = document.getElementById('status_drawer_grid');
-  if (lbl && genAt) lbl.textContent = `Updated: ${genAt.slice(0, 10)}`;
-  if (!grid || !Array.isArray(syncLog) || syncLog.length === 0) return;
-
-  const liveCnt = syncLog.filter(r => Number(r[2] || r.active_skaters || 0) > 0).length;
-  if (sub) sub.textContent = `${liveCnt} of ${syncLog.length} circuits active in current season • Last pipeline sync: ${genAt || 'Live'}`;
-
-  let html = '';
-  syncLog.forEach(r => {
-    const lgCode = Array.isArray(r) ? r[0] : r.league;
-    const skCnt  = Array.isArray(r) ? Number(r[2] || 0) : Number(r.active_skaters || 0);
-    const maxGp  = Array.isArray(r) ? Number(r[3] || 0) : Number(r.max_sk_gp || 0);
-    const gkCnt  = Array.isArray(r) ? Number(r[4] || 0) : Number(r.active_goalies || 0);
-    const status = Array.isArray(r) ? String(r[6] || '') : String(r.sync_status || '');
-    const dotCol = skCnt > 0 ? '#34D399' : '#F59E0B';
-    const statTxt= skCnt > 0 ? `${skCnt} SK • ${gkCnt} G (Max ${maxGp} GP)` : 'Off-Season / Pending';
-    html += `<div style="background:#1E293B; border:1px solid #334155; border-radius:4px; padding:5px 8px; display:flex; justify-content:space-between; align-items:center;">
-      <div>
-        <div style="font-weight:700; color:#F8FAFC;"><span style="color:${dotCol}; margin-right:4px;">●</span>${fmtLeague(lgCode)} <span style="color:#64748B; font-size:0.70rem;">(${lgCode})</span></div>
-        <div style="color:#94A3B8; font-size:0.72rem;">${statTxt}</div>
-      </div>
-    </div>`;
-  });
-  grid.innerHTML = html;
-}
 
 const TIER_ORDER = [
   "U18_PREP", "EURO_JUNIOR", "JUNIOR_A", "USHL_NTDP", "CHL",
@@ -1640,9 +1588,9 @@ document.addEventListener('DOMContentLoaded', function() {
     })
     .then(data => {
       ALL_PROSPECTS = Array.isArray(data) ? data : data.rows.map(r => Object.fromEntries(data.cols.map((c, i) => [c, r[i]])));
-      if (!Array.isArray(data) && data.sync_log) {
-        LEAGUE_SYNC_LOG = data.sync_log;
-        renderDataStatusDrawer(data.sync_log, data.generated_at);
+      const lblSync = document.getElementById('lbl_last_sync');
+      if (lblSync && !Array.isArray(data) && data.generated_at) {
+        lblSync.textContent = `Updated: ${String(data.generated_at).slice(0, 10)}`;
       }
       let maxYr = 2027;
       ALL_PROSPECTS.forEach(d => {
