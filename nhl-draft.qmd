@@ -343,9 +343,10 @@ execute:
       <div class="chl-field" id="wrap-sort-mode">
         <label for="board_sort_mode">Sort Board By:</label>
         <select id="board_sort_mode" onchange="updateDraftBoard()">
-          <option value="ewar_bpa">Model Big Board (Best Player Available)</option>
-          <option value="market_pick">Consensus Draft Order (Expected Pick)</option>
+          <option value="market_pick">Projected Draft Order (1-to-224 Slot)</option>
+          <option value="ewar_bpa">Model Big Board (7-Year NHL eWAR)</option>
           <option value="surplus_ewar">Value Picks (Highest Surplus Value)</option>
+          <option value="risers_30d">Biggest Risers (30-Day Movement)</option>
         </select>
       </div>
 
@@ -481,9 +482,10 @@ execute:
       </div>
 
       <hr style="border-color:#E2E8F0; margin: 1rem 0;" />
-      <h5>Export Player Card</h5>
-      <p>Download a high-resolution PNG summary card of the active prospect dossier.</p>
-      <button class="chl-btn chl-btn-primary" onclick="downloadSocialCardPng()">Download Prospect Card (PNG)</button>
+      <h5>Share & Export Dossier</h5>
+      <p>Download a high-resolution PNG card or copy a direct link to this prospect.</p>
+      <button class="chl-btn chl-btn-primary" onclick="downloadSocialCardPng()" style="margin-bottom: 0.45rem;">Download Prospect Card (PNG)</button>
+      <button id="btn_copy_link" class="chl-btn" onclick="copyProspectLink()" style="background-color:#334155;">Copy Direct Link to Prospect</button>
     </div>
 
     <div class="chl-main">
@@ -493,14 +495,265 @@ execute:
           <div id="dossier_svg_container" style="width: 100%; overflow-x: auto;"></div>
         </div>
       </div>
+
+      <div id="dossier_comps_card" class="chl-card" style="display: none;">
+        <div class="chl-card-header">
+          <span>Historical Draft-Age Comparables (Statistical Twins at Same Age • 2014–2024 Draft Classes)</span>
+          <span style="font-size: 0.76rem; font-weight: 500; color: #64748B;">Click any comparable to inspect their historical Prospect Dossier</span>
+        </div>
+        <div class="chl-card-body" id="dossier_comps_container" style="padding: 0.85rem 1.05rem;"></div>
+      </div>
     </div>
   </div>
 </div>
 
 <script>
 let ALL_PROSPECTS = [];
+let MAX_COHORT_YEAR = 2027;
+let HIST_COMP_CACHE = null;
 let CURRENT_BOARD_ROWS = [];
 let CURRENT_DOSSIER_POOL = [];
+
+function syncUrlState(tab) {
+  try {
+    const activeTab = tab || (document.getElementById('panel-dossier').style.display !== 'none' ? 'dossier' : 'board');
+    const params = new URLSearchParams();
+    params.set('tab', activeTab);
+    if (activeTab === 'dossier') {
+      params.set('year', document.getElementById('dossier_cohort').value || String(MAX_COHORT_YEAR));
+      params.set('role', getRadioVal('dossier_role'));
+      const pVal = document.getElementById('dossier_player').value;
+      if (pVal) params.set('player', pVal);
+    } else {
+      params.set('year', document.getElementById('board_cohort').value || String(MAX_COHORT_YEAR));
+      params.set('role', getRadioVal('board_role'));
+    }
+    const newUrl = `${window.location.pathname}?${params.toString()}`;
+    window.history.replaceState({}, '', newUrl);
+  } catch (e) {}
+}
+
+function copyProspectLink() {
+  syncUrlState('dossier');
+  const btn = document.getElementById('btn_copy_link');
+  navigator.clipboard.writeText(window.location.href).then(() => {
+    if (btn) {
+      const orig = btn.textContent;
+      btn.textContent = '✓ Direct Link Copied!';
+      btn.style.backgroundColor = '#059669';
+      setTimeout(() => { btn.textContent = orig; btn.style.backgroundColor = '#334155'; }, 2000);
+    }
+  });
+}
+
+function buildHistoricalCompPools() {
+  if (HIST_COMP_CACHE || !ALL_PROSPECTS || ALL_PROSPECTS.length === 0) return;
+
+  const skPool = ALL_PROSPECTS.filter(d =>
+    d.role_type === 'skater' &&
+    Number(d.draft_cohort_year) <= 2024 &&
+    (Boolean(d.is_drafted) || Number(d.actual_nhl_gp || 0) >= 20) &&
+    Number(d.expected_pick || 224) <= 210
+  ).map(d => {
+    const p0 = Number(d.shrunken_pace_d0 ?? d.trajectory_ppg ?? 0.4);
+    const p1 = (Number(d.ppg_d1 || 0) > 0) ? Number(d.ppg_d1) : p0 * 0.65;
+    return {
+      row: d,
+      pos: String(d.position_group || 'F'),
+      re: Number(d.re_entry_level || 0) > 0 ? 1 : 0,
+      st0: String(d.state_t0 || mapCircuitToTier(d.league)),
+      vec: [
+        Number(d.trajectory_ppg || 0.4),
+        p0,
+        p1,
+        Number(d.growth_velocity || 0),
+        Math.log(Math.max(Number(d.expected_pick || 100), 1)),
+        Number(d.proj_7yr_ewar || 0),
+        Number(d.height_inches || 72),
+        Number(d.weight_lbs || 185)
+      ]
+    };
+  });
+
+  const gkPool = ALL_PROSPECTS.filter(d =>
+    d.role_type === 'goalie' &&
+    Number(d.draft_cohort_year) <= 2024 &&
+    Boolean(d.is_drafted) &&
+    (Number(d.actual_nhl_gp || 0) >= 10 || Number(d.actual_draft_pick || 225) <= 64 || Number(d.draft_cohort_year) >= 2021)
+  ).map(d => {
+    const g0 = Number(d.gsax_rate_d0 ?? d.trajectory_gsax_rate ?? 0);
+    return {
+      row: d,
+      re: Number(d.re_entry_level || 0) > 0 ? 1 : 0,
+      st0: String(d.state_t0 || mapCircuitToTier(d.league)),
+      vec: [
+        Number(d.trajectory_gsax_rate || 0),
+        g0,
+        Number(d.workload_weight || 0.5),
+        Math.log(Math.max(Number(d.expected_pick || 90), 15)),
+        Number(d.proj_7yr_ewar || 0),
+        Number(d.height_inches || 74),
+        Number(d.weight_lbs || 190)
+      ]
+    };
+  });
+
+  const calcSds = (pool, kLen) => {
+    const sds = [];
+    for (let j = 0; j < kLen; j++) {
+      const vals = pool.map(x => x.vec[j]);
+      const m = vals.reduce((a, b) => a + b, 0) / Math.max(vals.length, 1);
+      const v = vals.reduce((a, b) => a + (b - m) * (b - m), 0) / Math.max(vals.length - 1, 1);
+      sds.push(Math.max(Math.sqrt(v), 1e-4));
+    }
+    return sds;
+  };
+
+  const skSds = calcSds(skPool, 8);
+  const skW   = [2.6, 1.8, 1.2, 0.5, 2.8, 2.5, 1.1, 1.0];
+  const skWSum= skW.reduce((a, b) => a + b, 0);
+
+  const gkSds = calcSds(gkPool, 7);
+  const gkW   = [2.6, 2.0, 1.5, 2.8, 2.4, 2.5, 1.6];
+  const gkWSum= gkW.reduce((a, b) => a + b, 0);
+
+  // Precompute CSLS hubness baseline for goalies
+  gkPool.forEach((c1, i) => {
+    const dists = [];
+    gkPool.forEach((c2, j) => {
+      if (i === j) return;
+      let s = 0;
+      for (let f = 0; f < 7; f++) {
+        const z = (c1.vec[f] - c2.vec[f]) / gkSds[f];
+        s += gkW[f] * z * z;
+      }
+      dists.push(Math.sqrt(s / gkWSum));
+    });
+    dists.sort((a, b) => a - b);
+    const kTop = dists.slice(0, Math.min(7, dists.length));
+    c1.rHub = kTop.reduce((a, b) => a + b, 0) / Math.max(kTop.length, 1);
+  });
+
+  HIST_COMP_CACHE = { skPool, skSds, skW, skWSum, gkPool, gkSds, gkW, gkWSum };
+}
+
+function renderUpcomingProspectComps(p) {
+  const cardEl = document.getElementById('dossier_comps_card');
+  const contEl = document.getElementById('dossier_comps_container');
+  if (!cardEl || !contEl) return;
+
+  const isUpcoming = !Boolean(p.is_drafted) && Number(p.draft_cohort_year) >= MAX_COHORT_YEAR;
+  if (!isUpcoming) {
+    cardEl.style.display = 'none';
+    return;
+  }
+
+  buildHistoricalCompPools();
+  if (!HIST_COMP_CACHE) {
+    cardEl.style.display = 'none';
+    return;
+  }
+
+  const isGk = (p.role_type === 'goalie');
+  const tRe  = Number(p.re_entry_level || 0) > 0 ? 1 : 0;
+  const tSt0 = String(p.state_t0 || mapCircuitToTier(p.league));
+  let scored = [];
+
+  if (isGk) {
+    const { gkPool, gkSds, gkW, gkWSum } = HIST_COMP_CACHE;
+    const g0 = Number(p.gsax_rate_d0 ?? p.trajectory_gsax_rate ?? 0);
+    const tVec = [
+      Number(p.trajectory_gsax_rate || 0),
+      g0,
+      Number(p.workload_weight || 0.5),
+      Math.log(Math.max(Number(p.expected_pick || 90), 15)),
+      Number(p.proj_7yr_ewar || 0),
+      Number(p.height_inches || 74),
+      Number(p.weight_lbs || 190)
+    ];
+    const isEuroT = ["EURO_JUNIOR", "PRO_DEVELOP", "EURO_ELITE"].includes(tSt0);
+    gkPool.forEach(c => {
+      if (c.re !== tRe || c.row.clean_name === p.clean_name) return;
+      let s = 0;
+      for (let f = 0; f < 7; f++) {
+        const z = (c.vec[f] - tVec[f]) / gkSds[f];
+        s += gkW[f] * z * z;
+      }
+      const isEuroC = ["EURO_JUNIOR", "PRO_DEVELOP", "EURO_ELITE"].includes(c.st0);
+      const regPen = (isEuroT === isEuroC) ? 0.0 : 0.25;
+      const rawD = Math.sqrt(s / gkWSum + regPen * regPen);
+      const cslsD = rawD - 0.30 * (c.rHub || 0);
+      scored.push({ row: c.row, rawD, sortD: cslsD });
+    });
+  } else {
+    const { skPool, skSds, skW, skWSum } = HIST_COMP_CACHE;
+    const tPos = String(p.position_group || 'F');
+    const p0 = Number(p.shrunken_pace_d0 ?? p.trajectory_ppg ?? 0.4);
+    const p1 = (Number(p.ppg_d1 || 0) > 0) ? Number(p.ppg_d1) : p0 * 0.65;
+    const tVec = [
+      Number(p.trajectory_ppg || 0.4),
+      p0,
+      p1,
+      Number(p.growth_velocity || 0),
+      Math.log(Math.max(Number(p.expected_pick || 100), 1)),
+      Number(p.proj_7yr_ewar || 0),
+      Number(p.height_inches || 72),
+      Number(p.weight_lbs || 185)
+    ];
+    skPool.forEach(c => {
+      if (c.pos !== tPos || c.re !== tRe || c.row.clean_name === p.clean_name) return;
+      let s = 0;
+      for (let f = 0; f < 8; f++) {
+        const z = (c.vec[f] - tVec[f]) / skSds[f];
+        s += skW[f] * z * z;
+      }
+      const tierPen = (c.st0 === tSt0) ? 0.0 : 0.35;
+      const rawD = Math.sqrt(s / skWSum + tierPen * tierPen);
+      scored.push({ row: c.row, rawD, sortD: rawD });
+    });
+  }
+
+  scored.sort((a, b) => a.sortD - b.sortD);
+  const top4 = scored.slice(0, 4);
+  if (top4.length === 0) {
+    cardEl.style.display = 'none';
+    return;
+  }
+
+  let html = `<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0.75rem;">`;
+  top4.forEach((item, idx) => {
+    const c = item.row;
+    const matchPct = (100 * Math.exp(-0.42 * Math.max(item.rawD, 0.08))).toFixed(1);
+    const cName = c.display_name || c.player_name;
+    const cYr   = c.draft_cohort_year;
+    const cPick = Number(c.actual_draft_pick || 0) > 0 ? `#${c.actual_draft_pick} Overall` : `Undrafted`;
+    const cLg   = fmtLeague(c.league);
+    const cHt   = fmtHeight(c.height_inches);
+    const cWt   = c.weight_lbs >= 100 ? `${Math.round(c.weight_lbs)} lbs` : '';
+    const cPace = isGk
+      ? `${(Number(c.trajectory_gsax_rate || 0) * 100 >= 0 ? '+' : '')}${(Number(c.trajectory_gsax_rate || 0) * 100).toFixed(2)}% GSAx`
+      : `${Number(c.trajectory_ppg || 0).toFixed(2)} OHL-Eq PPG`;
+    const nhlGp = Number(c.actual_nhl_gp || 0);
+    const nhlEw = Number(c.actual_7yr_ewar || 0);
+    const nhlStr= nhlGp > 0
+      ? `NHL Outcome: <b>${nhlGp} GP • ${nhlEw >= 0 ? '+' : ''}${nhlEw.toFixed(1)} eWAR</b>`
+      : `NHL Outcome: Developing / Non-NHL`;
+    const safeClean = String(c.clean_name || c.player_name).replace(/'/g, "\\'");
+
+    html += `<div onclick="openProspectInDossier('${safeClean}', ${cYr}, '${c.role_type}')" style="background:#F8FAFC; border:1px solid #CBD5E1; border-left:4px solid #00747A; border-radius:6px; padding:0.65rem 0.8rem; cursor:pointer; transition:all 0.15s ease;" onmouseover="this.style.backgroundColor='#F1F5F9'" onmouseout="this.style.backgroundColor='#F8FAFC'">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.25rem;">
+        <div style="font-weight:800; font-size:0.95rem; color:#0F172A;">#${idx + 1} ${escXml(cName)}</div>
+        <span style="background:#E0F2FE; color:#0369A1; border:1px solid #7DD3FC; font-weight:700; font-size:0.74rem; padding:1px 6px; border-radius:4px;">${matchPct}% Match</span>
+      </div>
+      <div style="font-size:0.80rem; color:#475569; font-weight:600; margin-bottom:0.2rem;">${cYr} Draft (${cPick}) • ${escXml(cLg)}</div>
+      <div style="font-size:0.78rem; color:#64748B; margin-bottom:0.25rem;">Draft-Age: <b>${cPace}</b> • ${cHt}${cWt ? ' | ' + cWt : ''}</div>
+      <div style="font-size:0.78rem; color:#059669;">${nhlStr}</div>
+    </div>`;
+  });
+  html += `</div>`;
+  contEl.innerHTML = html;
+  cardEl.style.display = 'block';
+}
 
 const TIER_ORDER = [
   "U18_PREP", "EURO_JUNIOR", "JUNIOR_A", "USHL_NTDP", "CHL",
@@ -758,12 +1011,15 @@ function updateDraftBoard() {
       df.sort((a, b) => (Number(b.proj_7yr_ewar) || 0) - (Number(a.proj_7yr_ewar) || 0) || (Number(a.expected_pick) || 999) - (Number(b.expected_pick) || 999));
     } else if (sortMode === 'surplus_ewar') {
       df.sort((a, b) => (Number(b.surplus_7yr_ewar) || 0) - (Number(a.surplus_7yr_ewar) || 0) || (Number(b.proj_7yr_ewar) || 0) - (Number(a.proj_7yr_ewar) || 0));
+    } else if (sortMode === 'risers_30d') {
+      df.sort((a, b) => (Number(b.pick_delta) || 0) - (Number(a.pick_delta) || 0) || (Number(a.expected_pick) || 999) - (Number(b.expected_pick) || 999));
     } else {
       df.sort((a, b) => (Number(a.expected_pick) || 999) - (Number(b.expected_pick) || 999) || (Number(b.draft_equity_score) || 0) - (Number(a.draft_equity_score) || 0));
     }
   } else {
     df.sort((a, b) => (Number(a.expected_pick) || 999) - (Number(b.expected_pick) || 999) || (Number(b.draft_equity_score) || 0) - (Number(a.draft_equity_score) || 0));
   }
+  syncUrlState('board');
 
   CURRENT_BOARD_ROWS = df;
 
@@ -850,6 +1106,10 @@ function renderBoardTable(rows, role, cohortYr) {
         : '';
       const pkInt = Math.max(1, Math.round(Number(d.expected_pick || 224)));
       const rndInt = Math.max(1, Math.ceil((pkInt - 0.5) / 32));
+      const pDelta = parseInt(d.pick_delta || 0, 10);
+      const deltaBadge = (pDelta >= 1)
+        ? ` <span style="color:#059669;font-size:0.72rem;font-weight:700;" title="Moved up ${pDelta} spots over trailing 30 days">▲${pDelta}</span>`
+        : (pDelta <= -1 ? ` <span style="color:#D6604D;font-size:0.72rem;font-weight:700;" title="Moved down ${Math.abs(pDelta)} spots over trailing 30 days">▼${Math.abs(pDelta)}</span>` : '');
 
       let posBadge, d1, d0, adjPace, nhlPace;
       if (isRowGk) {
@@ -881,7 +1141,7 @@ function renderBoardTable(rows, role, cohortYr) {
         <td>${d0}</td>
         <td>${adjPace}</td>
         <td>${Number(d.p_drafted || 0).toFixed(1)}%</td>
-        <td><b>#${pkInt}</b> <span style="color:#64748B;font-size:0.76rem;">(Rd ${rndInt})</span></td>
+        <td><b>#${pkInt}</b>${deltaBadge} <span style="color:#64748B;font-size:0.76rem;">(Rd ${rndInt})</span></td>
         <td>${actPick}</td>
         <td><b><span style="color:#0284C7;">${Number(d.draft_equity_score || 0).toFixed(1)}</span></b></td>
         <td><b>${Number(d.p_nhl_20gp || 0).toFixed(1)}%</b> <span style="color:#64748B;font-size:0.75rem;">(${Math.round(d.p_nhl_100gp || 0)}%)</span></td>
@@ -1545,6 +1805,8 @@ function renderDossier() {
 
   svg += `</svg>`;
   container.innerHTML = svg;
+  renderUpcomingProspectComps(p);
+  syncUrlState('dossier');
 }
 
 function downloadSocialCardPng() {
@@ -1597,6 +1859,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const cy = parseInt(d.draft_cohort_year, 10);
         if (!isNaN(cy) && cy > maxYr) maxYr = cy;
       });
+      MAX_COHORT_YEAR = maxYr;
       bCohort.innerHTML = '';
       dCohort.innerHTML = '';
       for (let y = maxYr; y >= 2014; y--) {
@@ -1605,15 +1868,30 @@ document.addEventListener('DOMContentLoaded', function() {
       }
       bCohort.value = String(maxYr);
       dCohort.value = String(maxYr);
-      try {
-        updateDraftBoard();
-      } catch (e) {
-        console.error('Board render error:', e);
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const qTab    = urlParams.get('tab');
+      const qYear   = urlParams.get('year');
+      const qRole   = urlParams.get('role');
+      const qPlayer = urlParams.get('player');
+
+      if (qYear && Array.from(bCohort.options).some(o => o.value === qYear)) {
+        bCohort.value = qYear;
+        dCohort.value = qYear;
       }
-      try {
-        syncDossierPool();
-      } catch (e) {
-        console.error('Dossier init error:', e);
+      if (qTab === 'dossier') {
+        const rVal = (qRole === 'goalie' || qRole === 'skater') ? qRole : 'skater';
+        const rEl  = document.querySelector(`input[name="dossier_role"][value="${rVal}"]`);
+        if (rEl) rEl.checked = true;
+        syncDossierPool(qPlayer || null);
+        switchChlTab('dossier');
+      } else {
+        if (qRole && ['all', 'skater', 'goalie'].includes(qRole)) {
+          const rEl = document.querySelector(`input[name="board_role"][value="${qRole}"]`);
+          if (rEl) rEl.checked = true;
+        }
+        try { updateDraftBoard(); } catch (e) { console.error('Board render error:', e); }
+        try { syncDossierPool(); } catch (e) { console.error('Dossier init error:', e); }
       }
     })
     .catch(err => {
