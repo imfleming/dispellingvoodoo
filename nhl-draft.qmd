@@ -497,9 +497,9 @@ execute:
       </div>
 
       <div id="dossier_comps_card" class="chl-card" style="display: none;">
-        <div class="chl-card-header">
-          <span>Historical Draft-Age Comparables (Statistical Twins at Same Age • 2014–2024 Draft Classes)</span>
-          <span style="font-size: 0.76rem; font-weight: 500; color: #64748B;">Click any comparable to inspect their historical Prospect Dossier</span>
+        <div class="chl-card-header" style="flex-wrap: wrap; gap: 0.35rem;">
+          <span>Historical Draft-Age Comparables (2014–2024 Draft Classes)</span>
+          <span style="font-size: 0.76rem; font-weight: 500; color: #64748B;">Click any comparable to inspect their Prospect Dossier</span>
         </div>
         <div class="chl-card-body" id="dossier_comps_container" style="padding: 0.85rem 1.05rem;"></div>
       </div>
@@ -1843,7 +1843,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const bCohort = document.getElementById('board_cohort');
   const dCohort = document.getElementById('dossier_cohort');
 
-  fetch('assets/data/draft_projections.json?v=' + new Date().toISOString().slice(0, 10))
+  fetch('assets/data/draft_projections.json?v=v3_' + new Date().toISOString().slice(0, 13))
     .then(r => {
       if (!r.ok) throw new Error('HTTP ' + r.status);
       return r.json();
