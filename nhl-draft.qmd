@@ -9,13 +9,17 @@ execute:
 
 ```{=html}
 <style>
+#quarto-content.page-columns > main#quarto-document-content.column-page {
+  grid-column: screen-start / screen-end;
+}
+
 .chl-app-shell {
   background-color: #F8FAFC;
   color: #0F172A !important;
   font-family: 'Assistant', sans-serif;
   max-width: 1560px;
   width: 96%;
-  margin: 1rem auto 3rem auto;
+  margin: 0.5rem auto 3rem auto;
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
@@ -182,25 +186,14 @@ execute:
 
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.85rem;
   margin-bottom: 1rem;
 }
 
-@media (max-width: 1100px) {
-  .kpi-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (max-width: 576px) {
-  .kpi-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.5rem;
-  }
-  .kpi-value {
-    font-size: 1.15rem;
-  }
+.kpi-grid > .chl-card {
+  min-width: 0;
+  margin-bottom: 0;
 }
 
 .chl-card {
@@ -212,7 +205,8 @@ execute:
 }
 
 .chl-card-body {
-  padding: 0.9rem 1.1rem;
+  padding: 0.85rem 1rem;
+  min-width: 0;
 }
 
 .chl-card-header {
@@ -225,11 +219,32 @@ execute:
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem;
 }
 
 .kpi-title { font-size: 0.78rem; font-weight: 700; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px; }
-.kpi-value { font-size: 1.5rem; font-weight: 700; color: #0F172A; margin: 0.15rem 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kpi-value { font-size: clamp(1.05rem, 1.35vw, 1.4rem); line-height: 1.2; font-weight: 700; color: #0F172A; margin: 0.2rem 0; white-space: normal; overflow-wrap: break-word; word-break: normal; }
 .kpi-sub { font-size: 0.78rem; color: #475569; }
+
+@media (max-width: 1220px) {
+  .kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 576px) {
+  .kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+  .kpi-grid .chl-card-body {
+    padding: 0.65rem 0.75rem;
+  }
+  .kpi-value {
+    font-size: clamp(0.8rem, 3.8vw, 1.0rem);
+  }
+}
 
 .draft-board-wrap {
   overflow-x: auto;

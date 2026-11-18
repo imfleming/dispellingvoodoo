@@ -2,6 +2,11 @@
 
 /* 1. Full-page #00747A Teal Background & Assistant Body Typography */
 body,
+body.nav-fixed {
+  padding-top: 0 !important;
+}
+
+body,
 #quarto-content,
 .page-columns {
   background-color: #00747A !important;
@@ -10,6 +15,10 @@ body,
   font-size: 18px;
   line-height: 1.5;
   letter-spacing: normal;
+}
+
+#quarto-content > * {
+  padding-top: 0.25rem;
 }
 
 /* Hide Quarto's auto-generated title banner */
@@ -76,14 +85,21 @@ h3,
 }
 
 /* 2. Replicate Wix Stacked Header */
-#quarto-header,
+#quarto-header {
+  position: relative !important;
+  background-color: #00747A !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
 .navbar {
   position: relative !important;
   background-color: #00747A !important;
   border: none !important;
   box-shadow: none !important;
-  padding-top: 1.35rem;
-  padding-bottom: 0.5rem;
+  padding-top: 1rem;
+  padding-bottom: 0.25rem;
 }
 
 .navbar > .container-fluid {
@@ -100,8 +116,8 @@ h3,
   width: 100%;
   margin-left: 0 !important;
   margin-right: 0 !important;
-  margin-top: 0.15rem !important;
-  margin-bottom: 2.6rem !important;
+  margin-top: 0 !important;
+  margin-bottom: 1.35rem !important;
   padding-left: 0.5rem !important;
   display: flex !important;
   justify-content: flex-start !important;
