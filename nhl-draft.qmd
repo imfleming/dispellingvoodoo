@@ -367,7 +367,7 @@ execute:
 
       <div class="chl-field">
         <label for="board_cohort">Draft Class Year:</label>
-        <select id="board_cohort" onchange="updateDraftBoard()"></select>
+        <select id="board_cohort" onchange="onBoardCohortChange()"></select>
       </div>
 
       <div class="chl-field">
@@ -483,7 +483,7 @@ execute:
 
       <div class="chl-field">
         <label for="dossier_cohort">Draft Class Year:</label>
-        <select id="dossier_cohort" onchange="syncDossierPool()"></select>
+        <select id="dossier_cohort" onchange="onDossierCohortChange()"></select>
       </div>
 
       <div class="chl-field">
@@ -529,6 +529,92 @@ let HIST_COMP_CACHE = null;
 let CURRENT_BOARD_ROWS = [];
 let CURRENT_DOSSIER_POOL = [];
 
+let DATA_MODE = 'legacy'; // 'sharded' | 'legacy'
+let DATA_MANIFEST = null;
+let DATA_CACHE_BUST = 'v4_' + new Date().toISOString().slice(0, 13);
+const LOADED_COHORTS = new Set();
+const COHORT_INFLIGHT = new Map();
+const PROSPECT_ROW_KEYS = new Set();
+let HIST_COMP_ROWS = null;
+let HIST_COMPS_INFLIGHT = null;
+let LAST_COMPS_RENDER_KEY = null;
+
+function unpackRows(payload, fallbackCols) {
+  if (!payload) return [];
+  if (Array.isArray(payload)) return payload;
+  const cols = Array.isArray(payload.cols) ? payload.cols : (fallbackCols || []);
+  const rows = Array.isArray(payload.rows) ? payload.rows : [];
+  const out = new Array(rows.length);
+  for (let rIdx = 0; rIdx < rows.length; rIdx++) {
+    const r = rows[rIdx];
+    const obj = {};
+    for (let cIdx = 0; cIdx < cols.length; cIdx++) obj[cols[cIdx]] = r[cIdx];
+    out[rIdx] = obj;
+  }
+  return out;
+}
+
+function mergeProspectRows(rows) {
+  for (let i = 0; i < rows.length; i++) {
+    const d = rows[i];
+    const k = `${d.role_type}|${d.draft_cohort_year}|${prospectKey(d)}`;
+    if (!PROSPECT_ROW_KEYS.has(k)) {
+      PROSPECT_ROW_KEYS.add(k);
+      ALL_PROSPECTS.push(d);
+    }
+  }
+}
+
+async function ensureCohortLoaded(year) {
+  const yr = parseInt(year, 10);
+  if (isNaN(yr)) return;
+  if (DATA_MODE !== 'sharded' || LOADED_COHORTS.has(yr)) return;
+  if (COHORT_INFLIGHT.has(yr)) return COHORT_INFLIGHT.get(yr);
+
+  const pattern = (DATA_MANIFEST && DATA_MANIFEST.shard_pattern) || 'draft_projections_{year}.json';
+  const url = `assets/data/${pattern.replace('{year}', String(yr))}?v=${encodeURIComponent(DATA_CACHE_BUST)}`;
+  const req = fetch(url)
+    .then(r => {
+      if (!r.ok) throw new Error(`HTTP ${r.status} loading ${yr} draft class`);
+      return r.json();
+    })
+    .then(data => {
+      mergeProspectRows(unpackRows(data, DATA_MANIFEST && DATA_MANIFEST.cols));
+      LOADED_COHORTS.add(yr);
+    })
+    .finally(() => {
+      COHORT_INFLIGHT.delete(yr);
+    });
+  COHORT_INFLIGHT.set(yr, req);
+  return req;
+}
+
+async function ensureHistCompsLoaded() {
+  if (DATA_MODE !== 'sharded') return;
+  if (HIST_COMP_ROWS !== null) return;
+  if (HIST_COMPS_INFLIGHT) return HIST_COMPS_INFLIGHT;
+
+  const fname = (DATA_MANIFEST && DATA_MANIFEST.hist_comps_file) || 'draft_projections_hist_comps.json';
+  const url = `assets/data/${fname}?v=${encodeURIComponent(DATA_CACHE_BUST)}`;
+  HIST_COMPS_INFLIGHT = fetch(url)
+    .then(r => {
+      if (!r.ok) throw new Error(`HTTP ${r.status} loading historical comps`);
+      return r.json();
+    })
+    .then(data => {
+      HIST_COMP_ROWS = unpackRows(data, DATA_MANIFEST && DATA_MANIFEST.cols);
+      HIST_COMP_CACHE = null;
+    })
+    .catch(err => {
+      console.warn('Historical comps shard load failed:', err);
+      HIST_COMP_ROWS = [];
+    })
+    .finally(() => {
+      HIST_COMPS_INFLIGHT = null;
+    });
+  return HIST_COMPS_INFLIGHT;
+}
+
 function syncUrlState(tab) {
   try {
     const activeTab = tab || (document.getElementById('panel-dossier').style.display !== 'none' ? 'dossier' : 'board');
@@ -562,9 +648,10 @@ function copyProspectLink() {
 }
 
 function buildHistoricalCompPools() {
-  if (HIST_COMP_CACHE || !ALL_PROSPECTS || ALL_PROSPECTS.length === 0) return;
+  const compSource = (DATA_MODE === 'sharded') ? HIST_COMP_ROWS : ALL_PROSPECTS;
+  if (HIST_COMP_CACHE || !compSource || compSource.length === 0) return;
 
-  const skPool = ALL_PROSPECTS.filter(d =>
+  const skPool = compSource.filter(d =>
     d.role_type === 'skater' &&
     Number(d.draft_cohort_year) <= 2024 &&
     (Boolean(d.is_drafted) || Number(d.actual_nhl_gp || 0) >= 20) &&
@@ -590,7 +677,7 @@ function buildHistoricalCompPools() {
     };
   });
 
-  const gkPool = ALL_PROSPECTS.filter(d =>
+  const gkPool = compSource.filter(d =>
     d.role_type === 'goalie' &&
     Number(d.draft_cohort_year) <= 2024 &&
     Boolean(d.is_drafted) &&
@@ -660,6 +747,17 @@ function renderUpcomingProspectComps(p) {
   const isUpcoming = !Boolean(p.is_drafted) && Number(p.draft_cohort_year) >= MAX_COHORT_YEAR;
   if (!isUpcoming) {
     cardEl.style.display = 'none';
+    return;
+  }
+
+  const renderKey = `${p.role_type}|${p.draft_cohort_year}|${prospectKey(p)}`;
+  LAST_COMPS_RENDER_KEY = renderKey;
+  if (DATA_MODE === 'sharded' && HIST_COMP_ROWS === null) {
+    cardEl.style.display = 'block';
+    contEl.innerHTML = '<div style="font-size:0.84rem; color:#64748B;">Loading 2014–2024 historical comparable pool...</div>';
+    ensureHistCompsLoaded().then(() => {
+      if (LAST_COMPS_RENDER_KEY === renderKey) renderUpcomingProspectComps(p);
+    });
     return;
   }
 
@@ -962,17 +1060,24 @@ function hideSvgTip() {
   if (tip) tip.style.display = 'none';
 }
 
-function switchChlTab(tab) {
+function switchChlTab(tab, skipSync = false) {
   hideSvgTip();
   document.getElementById('panel-board').style.display   = (tab === 'board')   ? 'grid' : 'none';
   document.getElementById('panel-dossier').style.display = (tab === 'dossier') ? 'grid' : 'none';
   document.getElementById('btn-tab-board').classList.toggle('active', tab === 'board');
   document.getElementById('btn-tab-dossier').classList.toggle('active', tab === 'dossier');
+  if (skipSync) return;
   if (tab === 'dossier') {
-    if (CURRENT_DOSSIER_POOL.length === 0) syncDossierPool();
-    else renderDossier();
+    const dYr = parseInt(document.getElementById('dossier_cohort').value, 10) || MAX_COHORT_YEAR;
+    if (DATA_MODE === 'sharded' && !LOADED_COHORTS.has(dYr)) {
+      onDossierCohortChange();
+    } else if (CURRENT_DOSSIER_POOL.length === 0) {
+      syncDossierPool();
+    } else {
+      renderDossier();
+    }
   } else {
-    updateDraftBoard();
+    onBoardCohortChange();
   }
 }
 
@@ -980,12 +1085,45 @@ function prospectKey(d) {
   return String((d && (d.player_uid || d.clean_name || d.player_name)) || '');
 }
 
-function openProspectInDossier(targetKey, cohortYear, role) {
-  document.querySelector(`input[name="dossier_role"][value="${role}"]`).checked = true;
+async function onBoardCohortChange() {
+  const yr = parseInt(document.getElementById('board_cohort').value, 10) || MAX_COHORT_YEAR;
+  if (DATA_MODE === 'sharded' && !LOADED_COHORTS.has(yr)) {
+    const cont = document.getElementById('board_table_container');
+    if (cont) cont.innerHTML = `<div style="padding:1.5rem; color:#64748B; font-weight:600;">Loading ${yr} Draft Class...</div>`;
+    try {
+      await ensureCohortLoaded(yr);
+    } catch (err) {
+      if (cont) cont.innerHTML = `<div style="padding:1.5rem; color:#D6604D;"><b>Failed to load ${yr} draft class (${escHtml(err.message)}).</b></div>`;
+      return;
+    }
+    if (parseInt(document.getElementById('board_cohort').value, 10) !== yr) return;
+  }
+  updateDraftBoard();
+}
+
+async function onDossierCohortChange(targetKey = null) {
+  const yr = parseInt(document.getElementById('dossier_cohort').value, 10) || MAX_COHORT_YEAR;
+  if (DATA_MODE === 'sharded' && !LOADED_COHORTS.has(yr)) {
+    const svgCont = document.getElementById('dossier_svg_container');
+    if (svgCont) svgCont.innerHTML = `<div style="padding:2.5rem; text-align:center; color:#64748B; font-weight:600;">Loading ${yr} Draft Class Dossiers...</div>`;
+    try {
+      await ensureCohortLoaded(yr);
+    } catch (err) {
+      if (svgCont) svgCont.innerHTML = `<div style="padding:2rem; color:#D6604D;"><b>Failed to load ${yr} draft class (${escHtml(err.message)}).</b></div>`;
+      return;
+    }
+    if (parseInt(document.getElementById('dossier_cohort').value, 10) !== yr) return;
+  }
+  syncDossierPool(targetKey);
+}
+
+async function openProspectInDossier(targetKey, cohortYear, role) {
+  const rEl = document.querySelector(`input[name="dossier_role"][value="${role}"]`);
+  if (rEl) rEl.checked = true;
   document.getElementById('dossier_cohort').value = String(cohortYear);
   document.getElementById('dossier_search').value = '';
-  syncDossierPool(targetKey);
-  switchChlTab('dossier');
+  switchChlTab('dossier', true);
+  await onDossierCohortChange(targetKey);
 }
 
 function tipHdr(label, tip) {
@@ -1866,64 +2004,106 @@ function downloadSocialCardPng() {
   img.src = url;
 }
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
   const bCohort = document.getElementById('board_cohort');
   const dCohort = document.getElementById('dossier_cohort');
+  const lblSync = document.getElementById('lbl_last_sync');
 
-  fetch('assets/data/draft_projections.json?v=v3_' + new Date().toISOString().slice(0, 13))
-    .then(r => {
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      return r.json();
-    })
-    .then(data => {
-      ALL_PROSPECTS = Array.isArray(data) ? data : data.rows.map(r => Object.fromEntries(data.cols.map((c, i) => [c, r[i]])));
-      const lblSync = document.getElementById('lbl_last_sync');
-      if (lblSync && !Array.isArray(data) && data.generated_at) {
-        lblSync.textContent = `Updated: ${String(data.generated_at).slice(0, 10)}`;
-      }
-      let maxYr = 2027;
-      ALL_PROSPECTS.forEach(d => {
-        const cy = parseInt(d.draft_cohort_year, 10);
-        if (!isNaN(cy) && cy > maxYr) maxYr = cy;
-      });
-      MAX_COHORT_YEAR = maxYr;
-      bCohort.innerHTML = '';
-      dCohort.innerHTML = '';
-      for (let y = maxYr; y >= 2014; y--) {
-        bCohort.add(new Option(String(y), String(y)));
-        dCohort.add(new Option(String(y), String(y)));
-      }
-      bCohort.value = String(maxYr);
-      dCohort.value = String(maxYr);
+  const urlParams = new URLSearchParams(window.location.search);
+  const qTab    = urlParams.get('tab');
+  const qYear   = urlParams.get('year');
+  const qRole   = urlParams.get('role');
+  const qPlayer = urlParams.get('player');
 
-      const urlParams = new URLSearchParams(window.location.search);
-      const qTab    = urlParams.get('tab');
-      const qYear   = urlParams.get('year');
-      const qRole   = urlParams.get('role');
-      const qPlayer = urlParams.get('player');
-
-      if (qYear && Array.from(bCohort.options).some(o => o.value === qYear)) {
-        bCohort.value = qYear;
-        dCohort.value = qYear;
-      }
-      if (qTab === 'dossier') {
-        const rVal = (qRole === 'goalie' || qRole === 'skater') ? qRole : 'skater';
-        const rEl  = document.querySelector(`input[name="dossier_role"][value="${rVal}"]`);
-        if (rEl) rEl.checked = true;
-        syncDossierPool(qPlayer || null);
-        switchChlTab('dossier');
-      } else {
-        if (qRole && ['all', 'skater', 'goalie'].includes(qRole)) {
-          const rEl = document.querySelector(`input[name="board_role"][value="${qRole}"]`);
-          if (rEl) rEl.checked = true;
-        }
-        try { updateDraftBoard(); } catch (e) { console.error('Board render error:', e); }
-        try { syncDossierPool(); } catch (e) { console.error('Dossier init error:', e); }
-      }
-    })
-    .catch(err => {
-      document.getElementById('board_table_container').innerHTML = `<div style="padding:1.5rem;color:#D6604D;"><b>Failed to load JSON (${err.message}):</b> Ensure <code>assets/data/draft_projections.json</code> exists.</div>`;
+  const populateCohortDropdowns = (cohortsList) => {
+    const years = Array.isArray(cohortsList) && cohortsList.length > 0
+      ? cohortsList.map(y => parseInt(y, 10)).filter(y => !isNaN(y)).sort((a, b) => b - a)
+      : [];
+    const maxYr = years.length > 0 ? years[0] : 2027;
+    MAX_COHORT_YEAR = maxYr;
+    const finalYears = years.length > 0 ? years : Array.from({ length: maxYr - 2013 }, (_, i) => maxYr - i);
+    bCohort.innerHTML = '';
+    dCohort.innerHTML = '';
+    finalYears.forEach(y => {
+      bCohort.add(new Option(String(y), String(y)));
+      dCohort.add(new Option(String(y), String(y)));
     });
+    bCohort.value = String(maxYr);
+    dCohort.value = String(maxYr);
+    if (qYear && Array.from(bCohort.options).some(o => o.value === qYear)) {
+      bCohort.value = qYear;
+      dCohort.value = qYear;
+    }
+    return parseInt(bCohort.value, 10) || maxYr;
+  };
+
+  const renderInitialView = () => {
+    if (qTab === 'dossier') {
+      const rVal = (qRole === 'goalie' || qRole === 'skater') ? qRole : 'skater';
+      const rEl  = document.querySelector(`input[name="dossier_role"][value="${rVal}"]`);
+      if (rEl) rEl.checked = true;
+      syncDossierPool(qPlayer || null);
+      switchChlTab('dossier', true);
+    } else {
+      if (qRole && ['all', 'skater', 'goalie'].includes(qRole)) {
+        const rEl = document.querySelector(`input[name="board_role"][value="${qRole}"]`);
+        if (rEl) rEl.checked = true;
+      }
+      try { updateDraftBoard(); } catch (e) { console.error('Board render error:', e); }
+      try { syncDossierPool(); } catch (e) { console.error('Dossier init error:', e); }
+    }
+  };
+
+  try {
+    // 1. Try Sharded Per-Cohort Manifest First (~3 KB + ~1.4 MB active shard vs 20+ MB monolith)
+    let manifest = null;
+    try {
+      const mRes = await fetch('assets/data/draft_projections_manifest.json?v=' + encodeURIComponent(DATA_CACHE_BUST));
+      if (mRes.ok) manifest = await mRes.json();
+    } catch (_) {
+      manifest = null;
+    }
+
+    if (manifest && Array.isArray(manifest.cohorts) && manifest.cohorts.length > 0) {
+      DATA_MODE = 'sharded';
+      DATA_MANIFEST = manifest;
+      if (manifest.generated_at) {
+        DATA_CACHE_BUST = String(manifest.generated_at).replace(/[^0-9A-Za-z]/g, '').slice(0, 14) || DATA_CACHE_BUST;
+        if (lblSync) lblSync.textContent = `Updated: ${String(manifest.generated_at).slice(0, 10)}`;
+      }
+      const initialYr = populateCohortDropdowns(manifest.cohorts);
+      await ensureCohortLoaded(initialYr);
+      renderInitialView();
+
+      // Idle-prefetch compact historical comps pool (~0.8 MB) so Tab 2 Comps render instantaneously
+      const prefetchComps = () => { ensureHistCompsLoaded(); };
+      if (typeof window.requestIdleCallback === 'function') {
+        window.requestIdleCallback(prefetchComps, { timeout: 1500 });
+      } else {
+        setTimeout(prefetchComps, 350);
+      }
+      return;
+    }
+
+    // 2. Seamless Fallback to Legacy Monolithic JSON if Shards Not Yet Exported
+    const r = await fetch('assets/data/draft_projections.json?v=' + encodeURIComponent(DATA_CACHE_BUST));
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    DATA_MODE = 'legacy';
+    ALL_PROSPECTS = unpackRows(data);
+    if (lblSync && !Array.isArray(data) && data.generated_at) {
+      lblSync.textContent = `Updated: ${String(data.generated_at).slice(0, 10)}`;
+    }
+    let maxYr = 2027;
+    ALL_PROSPECTS.forEach(d => {
+      const cy = parseInt(d.draft_cohort_year, 10);
+      if (!isNaN(cy) && cy > maxYr) maxYr = cy;
+    });
+    populateCohortDropdowns(Array.from({ length: maxYr - 2013 }, (_, i) => maxYr - i));
+    renderInitialView();
+  } catch (err) {
+    document.getElementById('board_table_container').innerHTML = `<div style="padding:1.5rem;color:#D6604D;"><b>Failed to load draft projections (${escHtml(err.message)}):</b> Ensure <code>assets/data/draft_projections_manifest.json</code> or <code>assets/data/draft_projections.json</code> exists.</div>`;
+  }
 });
 </script>
 ```
