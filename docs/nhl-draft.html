@@ -844,8 +844,9 @@ function renderUpcomingProspectComps(p) {
       Number(p.weight_lbs || 190)
     ];
     const isEuroT = ["EURO_JUNIOR", "PRO_DEVELOP", "EURO_ELITE"].includes(tSt0);
+    const tKey = prospectKey(p);
     gkPool.forEach(c => {
-      if (c.re !== tRe || c.row.clean_name === p.clean_name) return;
+      if (c.re !== tRe || prospectKey(c.row) === tKey) return;
       let s = 0;
       for (let f = 0; f < 7; f++) {
         const z = (c.vec[f] - tVec[f]) / gkSds[f];
@@ -872,8 +873,9 @@ function renderUpcomingProspectComps(p) {
       Number(p.height_inches || 72),
       Number(p.weight_lbs || 185)
     ];
+    const tKey = prospectKey(p);
     skPool.forEach(c => {
-      if (c.pos !== tPos || c.re !== tRe || c.row.clean_name === p.clean_name) return;
+      if (c.pos !== tPos || c.re !== tRe || prospectKey(c.row) === tKey) return;
       let s = 0;
       for (let f = 0; f < 8; f++) {
         const z = (c.vec[f] - tVec[f]) / skSds[f];
@@ -910,9 +912,9 @@ function renderUpcomingProspectComps(p) {
     const nhlStr= nhlGp > 0
       ? `NHL Outcome: <b>${nhlGp} GP • ${nhlEw >= 0 ? '+' : ''}${nhlEw.toFixed(1)} eWAR</b>`
       : `NHL Outcome: Developing / Non-NHL`;
-    const safeClean = String(c.clean_name || c.player_name).replace(/'/g, "\\'");
+    const safeKey = prospectKey(c).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 
-    html += `<div onclick="openProspectInDossier('${safeClean}', ${cYr}, '${c.role_type}')" style="background:#F8FAFC; border:1px solid #CBD5E1; border-left:4px solid #00747A; border-radius:6px; padding:0.65rem 0.8rem; cursor:pointer; transition:all 0.15s ease;" onmouseover="this.style.backgroundColor='#F1F5F9'" onmouseout="this.style.backgroundColor='#F8FAFC'">
+    html += `<div onclick="openProspectInDossier('${safeKey}', ${cYr}, '${c.role_type}')" style="background:#F8FAFC; border:1px solid #CBD5E1; border-left:4px solid #00747A; border-radius:6px; padding:0.65rem 0.8rem; cursor:pointer; transition:all 0.15s ease;" onmouseover="this.style.backgroundColor='#F1F5F9'" onmouseout="this.style.backgroundColor='#F8FAFC'">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.25rem;">
         <div style="font-weight:800; font-size:0.95rem; color:#0F172A;">#${idx + 1} ${escXml(cName)}</div>
         <span style="background:#E0F2FE; color:#0369A1; border:1px solid #7DD3FC; font-weight:700; font-size:0.74rem; padding:1px 6px; border-radius:4px;">${matchPct}% Match</span>
@@ -1131,11 +1133,15 @@ function switchChlTab(tab) {
   }
 }
 
-function openProspectInDossier(cleanName, cohortYear, role) {
+function prospectKey(d) {
+  return String((d && (d.player_uid || d.clean_name || d.player_name)) || '');
+}
+
+function openProspectInDossier(targetKey, cohortYear, role) {
   document.querySelector(`input[name="dossier_role"][value="${role}"]`).checked = true;
   document.getElementById('dossier_cohort').value = String(cohortYear);
   document.getElementById('dossier_search').value = '';
-  syncDossierPool(cleanName);
+  syncDossierPool(targetKey);
   switchChlTab('dossier');
 }
 
@@ -1272,7 +1278,7 @@ function renderBoardTable(rows, role, cohortYr) {
       const actPick = (d.actual_draft_pick > 0) ? `<span class="badge" style="background-color:#0284C7;color:#FFFFFF;font-weight:700;padding:2px 6px;border-radius:4px;">#${d.actual_draft_pick}</span>` : `<span style="color:#94A3B8;">-</span>`;
       const surp = Number(d.surplus_7yr_ewar || 0);
       const surpCol = surp >= 0 ? '#059669' : '#D6604D';
-      const safeClean = String(d.clean_name || d.player_name).replace(/'/g, "\\'");
+      const safeKey = prospectKey(d).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
       const reBadge = (Number(d.re_entry_level) > 0)
         ? ` <span class="badge" style="background-color:#FEF3C7;color:#92400E;border:1px solid #F59E0B;font-size:0.70rem;font-weight:700;padding:1px 5px;border-radius:4px;" title="Overage Re-Entry (D+${d.re_entry_level})">D+${d.re_entry_level}</span>`
         : '';
@@ -1303,7 +1309,7 @@ function renderBoardTable(rows, role, cohortYr) {
         nhlPace = `${Number(d.cond_nhl_pts_82 || 0).toFixed(1)} PTS`;
       }
 
-      html += `<tr onclick="openProspectInDossier('${safeClean}', ${cohortYr}, '${d.role_type}')">
+      html += `<tr onclick="openProspectInDossier('${safeKey}', ${cohortYr}, '${d.role_type}')">
         <td>${idx + 1}</td>
         <td><b>${d.display_name || d.player_name}</b>${reBadge}</td>
         <td>${posBadge}</td>
@@ -1357,12 +1363,12 @@ function renderBoardTable(rows, role, cohortYr) {
         ? `<b>${adjRate >= 0 ? '+' : ''}${adjRate.toFixed(2)}%</b> <span style="color:${gkCol};font-size:0.75rem;font-weight:600;">(${gkDiff >= 0 ? '+' : ''}${gkDiff.toFixed(2)}%)</span>`
         : `<b>${adjRate >= 0 ? '+' : ''}${adjRate.toFixed(2)}%</b>`;
       const actPick = (d.actual_draft_pick > 0) ? `<span class="badge" style="background-color:#0284C7;color:#FFFFFF;font-weight:700;padding:2px 6px;border-radius:4px;">#${d.actual_draft_pick}</span>` : `<span style="color:#94A3B8;">-</span>`;
-      const safeClean = String(d.clean_name || d.player_name).replace(/'/g, "\\'");
+      const safeKey = prospectKey(d).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
       const pkInt = Math.max(1, Math.round(Number(d.expected_pick || 224)));
       const rndInt = Math.max(1, Math.ceil((pkInt - 0.5) / 32));
       const gkEwar = Number(d.proj_7yr_ewar || 0);
 
-      html += `<tr onclick="openProspectInDossier('${safeClean}', ${cohortYr}, 'goalie')">
+      html += `<tr onclick="openProspectInDossier('${safeKey}', ${cohortYr}, 'goalie')">
         <td>${idx + 1}</td>
         <td><b>${d.display_name || d.player_name}</b></td>
         <td><b title="All Circuits: ${fmtLeagueBanner(d.all_leagues, d.league)}">${fmtLeague(d.league)}</b></td>
@@ -1528,7 +1534,7 @@ function exportDraftBoardCsv() {
 // ============================================================================
 // TAB 2: PROSPECT DOSSIER (EXACT 16:9 VECTOR PORT OF viz_career_pathway.R)
 // ============================================================================
-function syncDossierPool(targetCleanName = null) {
+function syncDossierPool(targetKey = null) {
   if (!ALL_PROSPECTS || ALL_PROSPECTS.length === 0) return;
 
   const role     = getRadioVal('dossier_role');
@@ -1538,10 +1544,10 @@ function syncDossierPool(targetCleanName = null) {
     .filter(d => d.role_type === role && Number(d.draft_cohort_year) === cohortYr)
     .sort((a, b) => (Number(a.expected_pick) || 999) - (Number(b.expected_pick) || 999));
 
-  populateDossierSelect(targetCleanName);
+  populateDossierSelect(targetKey);
 }
 
-function populateDossierSelect(targetCleanName = null) {
+function populateDossierSelect(targetKey = null) {
   const sel = document.getElementById('dossier_player');
   const q   = (document.getElementById('dossier_search').value || '').trim().toUpperCase();
   const filtered = CURRENT_DOSSIER_POOL.filter(d => {
@@ -1552,7 +1558,7 @@ function populateDossierSelect(targetCleanName = null) {
   sel.innerHTML = '';
   filtered.forEach(d => {
     const opt = document.createElement('option');
-    opt.value = d.clean_name || d.player_name;
+    opt.value = prospectKey(d);
     const pos = d.position_granular || 'G';
     const reTxt = (Number(d.re_entry_level) > 0) ? ` • D+${d.re_entry_level}` : '';
     const pkInt = Math.max(1, Math.round(Number(d.expected_pick || 224)));
@@ -1560,8 +1566,12 @@ function populateDossierSelect(targetCleanName = null) {
     sel.appendChild(opt);
   });
 
-  if (targetCleanName && filtered.some(d => (d.clean_name || d.player_name) === targetCleanName)) {
-    sel.value = targetCleanName;
+  const matched = targetKey
+    ? (filtered.find(d => prospectKey(d) === targetKey) ||
+       filtered.find(d => (d.clean_name || d.player_name) === targetKey))
+    : null;
+  if (matched) {
+    sel.value = prospectKey(matched);
   } else if (sel.options.length > 0) {
     sel.selectedIndex = 0;
   }
@@ -1570,7 +1580,9 @@ function populateDossierSelect(targetCleanName = null) {
 
 function renderDossier() {
   const selVal = document.getElementById('dossier_player').value;
-  const p = CURRENT_DOSSIER_POOL.find(d => (d.clean_name || d.player_name) === selVal) || CURRENT_DOSSIER_POOL[0];
+  const p = CURRENT_DOSSIER_POOL.find(d => prospectKey(d) === selVal)
+    || CURRENT_DOSSIER_POOL.find(d => (d.clean_name || d.player_name) === selVal)
+    || CURRENT_DOSSIER_POOL[0];
   const container = document.getElementById('dossier_svg_container');
   if (!p) {
     container.innerHTML = `<div style="padding:1.5rem;color:#64748B;">No prospect selected.</div>`;
